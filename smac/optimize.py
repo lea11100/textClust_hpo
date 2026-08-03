@@ -10,13 +10,14 @@ import time
 from typing import List, Optional, Tuple
 import numpy as np
 
+import pandas as pd
 
 
 from textClust.history.manager import HistoryManager
 from textClust.offline.cluster import Macrocluster
 
-ROOT = Path(__file__).resolve().parent  # directory of this file
-sys.path.append(str(ROOT / "../ext_lib/mosmac"))
+# ROOT = Path(__file__).resolve().parent  # directory of this file
+# sys.path.append(str(ROOT / "../ext_lib/mosmac"))
 
 from ConfigSpace import Configuration, ConfigurationSpace
 from sentence_transformers import SentenceTransformer
@@ -30,6 +31,7 @@ from textClust.utils.eval import eval_against_truth
 from textClust.offline.clusterer import SimpleMacroClusterer
 from textClust.history.manager import HistoryManager
 from textClust.online.clusterer import Microclusterer
+from textClust.preprocessing.preprocessor import SimulatedEmbeddingPreprocessor
 
 # datasets = {
 #     "Semantic10-T": "examples/data/Semantic10-T.json",
@@ -45,22 +47,22 @@ from textClust.online.clusterer import Microclusterer
 # }
 
 datasets = {
-    "Arabic_7" : "examples/social_ed_data/Arabic_7.npy",
-    "Arabic_Twitter" : "examples/social_ed_data/Arabic_Twitter.npy",
-    "CrisisLexT6" : "examples/social_ed_data/CrisisLexT6.npy",
-    "CrisisLexT7" : "examples/social_ed_data/CrisisLexT7.npy",
-    "CrisisLexT26" : "examples/social_ed_data/CrisisLexT26.npy",
-    "CrisisMMD" : "examples/social_ed_data/CrisisMMD.npy",
-    "CrisisNLP" : "examples/social_ed_data/CrisisNLP.npy",
-    "Event2012" : "examples/social_ed_data/Event2012.npy",
-    "Event2018" : "examples/social_ed_data/Event2018.npy",
-    "HumAID" : "examples/social_ed_data/HumAID.npy",
-    "KBP" : "examples/social_ed_data/KBP.npy",
-    "MAVEN" : "examples/social_ed_data/MAVEN.npy",
-    "Mix_Data" : "examples/social_ed_data/Mix_Data.npy",
-    "Semantic5-T" : "examples/data/Semantic5-T.json",
-    "Semantic10-T" : "examples/data/Semantic10-T.json",
-    "Semantic40-T" : "examples/data/Semantic40-T.json",
+    "Arabic_7" : "data/social_ed_data/Arabic_7.npy",
+    "Arabic_Twitter" : "data/social_ed_data/Arabic_Twitter.npy",
+    "CrisisLexT6" : "data/social_ed_data/CrisisLexT6.npy",
+    "CrisisLexT7" : "data/social_ed_data/CrisisLexT7.npy",
+    "CrisisLexT26" : "data/social_ed_data/CrisisLexT26.npy",
+    "CrisisMMD" : "data/social_ed_data/CrisisMMD.npy",
+    "CrisisNLP" : "data/social_ed_data/CrisisNLP.npy",
+    "Event2012" : "data/social_ed_data/Event2012.npy",
+    "Event2018" : "data/social_ed_data/Event2018.npy",
+    "HumAID" : "data/social_ed_data/HumAID.npy",
+    "KBP" : "data/social_ed_data/KBP.npy",
+    "MAVEN" : "data/social_ed_data/MAVEN.npy",
+    "Mix_Data" : "data/social_ed_data/Mix_Data.npy",
+    "Semantic5-T" : "data/Semantic5-T.json",
+    "Semantic10-T" : "data/Semantic10-T.json",
+    "Semantic40-T" : "data/Semantic40-T.json",
 }
 
 # embedding_model_name = 'ibm-granite/granite-embedding-107m-multilingual'
@@ -108,7 +110,7 @@ class ThroughputLimitHistoryManager(HistoryManager):
 
 def make_train_function(algorithm: str, max_samples:Optional[int]=30_000, throughput_limit: float = 2.0, log_after_n_points: int = 1000):
     
-    def get_algorithm(config: Configuration, seed:int = 1,instance:str = ""):
+    def get_algorithm(config: Configuration, seed:Optional[int] = 1,instance:str = ""):
         if instance.endswith(".npy"):
             data_loader = SocialEDWrapper(instance, max_samples=max_samples, random_start_seed=seed)
         else:
@@ -116,10 +118,12 @@ def make_train_function(algorithm: str, max_samples:Optional[int]=30_000, throug
         if algorithm == "embClust":
             embedding_model_name = config.get("model", "sentenceTransformers")
             embedding_model = models.get(embedding_model_name, models["sentenceTransformers"])
-            return get_embClust(data_loader=data_loader,
+            embClust = get_embClust(data_loader=data_loader,
                                 embedding_model=embedding_model,
                                 log_interval=log_after_n_points,
                                 **config)
+            embClust.preprocessor = SimulatedEmbeddingPreprocessor(embedding_model_name, instance)
+            return embClust
         elif algorithm == "textClust":
             return get_fastLogClust(data_loader=data_loader,
                                  log_interval=log_after_n_points,
@@ -128,7 +132,7 @@ def make_train_function(algorithm: str, max_samples:Optional[int]=30_000, throug
             raise ValueError(f"Unknown algorithm: {algorithm}")
         
         
-    def train(config: Configuration, seed: int = 1, instance:str = "") -> Tuple[dict[str, float], dict[str, str]]:
+    def train(config: Configuration, seed: Optional[int] = 1, instance:str = "") -> Tuple[dict[str, float], dict[str, str]]:
         algorithm = get_algorithm(config, seed, instance)
 
         algorithm.verbose = False
@@ -173,6 +177,7 @@ if __name__ == "__main__":
     with open(f'experiments/smac/params_{parsed_args.algorithm}.pcs', 'r') as f:
         configuration = pcs.read(f)
 
+    output_path = Path(f"smac3_output/{parsed_args.algorithm}/loo_{parsed_args.loo_datasets}_seed_{parsed_args.seed}")
     # Scenario object specifying the optimization environment
     scenario = Scenario(
         configuration,
@@ -184,17 +189,41 @@ if __name__ == "__main__":
         n_trials=250,
         seed=parsed_args.seed,
         crash_cost = [2.0, 2.0],  # Cost for crashing runs (e.g., due to low throughput)
-        output_directory=os.path.join(f"smac3_output/{parsed_args.algorithm}", f"loo_{parsed_args.loo_dataset}_seed_{parsed_args.seed}")
+        output_directory=output_path
     )
 
     # Use SMAC to find the best configuration/hyperparameters
     smac = MultiObjectiveFacade(scenario, make_train_function(parsed_args.algorithm))  # Use multi-objective optimization if needed
     incumbents = smac.optimize()
+    assert isinstance(incumbents, list), "Expected incumbents to be a list of configurations."
 
     print("Best found configuration:", incumbents)
     
     #Store the best configuration in a JSON file for later use
-    best_config_path = os.path.join(f"smac3_results/{parsed_args.algorithm}", f"best_config_loo_{parsed_args.loo_dataset}_seed_{parsed_args.seed}.json")
+    config_name = f"best_config_loo_{parsed_args.loo_datasets}_seed_{parsed_args.seed}.json"
+    best_config_path = f"smac3_best_configs/{parsed_args.algorithm}/{config_name}"
     os.makedirs(os.path.dirname(best_config_path), exist_ok=True)
     with open(best_config_path, 'w') as f:
         json.dump([dict(i.items()) for i in incumbents], f, indent=4)
+        
+    print ("Optimization completed. Best configuration saved to:", best_config_path)
+    print ("Start evaluation of the best configuration on full datasets...")
+    
+    results = []
+    
+    for i, c in enumerate(incumbents):
+        for d in datasets.values():
+            print(f"Evaluating configuration on dataset: {d}")
+            train = make_train_function(parsed_args.algorithm, max_samples=None, throughput_limit=0.0, log_after_n_points=1000)
+            performance = train(c, seed=None, instance=d)[1]
+            print("FINISHED EVALUATION:", d, config_name, i, parsed_args.loo_datasets, parsed_args.seed, parsed_args.algorithm, performance)
+            performance["dataset"] = d
+            performance["config"] = config_name
+            performance["config_id"] = str(i)
+            performance["loo_dataset"] = parsed_args.loo_datasets
+            performance["seed"] = parsed_args.seed
+            performance["algorithm"] = parsed_args.algorithm
+            results.append(performance)
+            
+    df = pd.DataFrame(results)
+    df.to_csv(f"smac3_final_performance/{parsed_args.algorithm}/loo_{parsed_args.loo_datasets}_seed_{parsed_args.seed}.csv", index=False)
