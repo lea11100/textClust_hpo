@@ -39,45 +39,42 @@ datasets = {
     "Arabic_7" : "data/social_ed_data/Arabic_7.npy",
     "Arabic_Twitter" : "data/social_ed_data/Arabic_Twitter.npy",
     "CrisisLexT6" : "data/social_ed_data/CrisisLexT6.npy",
-    # "CrisisLexT7" : "data/social_ed_data/CrisisLexT7.npy",
-    # "CrisisLexT26" : "data/social_ed_data/CrisisLexT26.npy",
-    # "CrisisMMD" : "data/social_ed_data/CrisisMMD.npy",
-    # "CrisisNLP" : "data/social_ed_data/CrisisNLP.npy",
-    # "Event2012" : "data/social_ed_data/Event2012.npy",
-    # "Event2018" : "data/social_ed_data/Event2018.npy",
-    # "HumAID" : "data/social_ed_data/HumAID.npy",
-    # "KBP" : "data/social_ed_data/KBP.npy",
-    # "MAVEN" : "data/social_ed_data/MAVEN.npy",
-    # "Mix_Data" : "data/social_ed_data/Mix_Data.npy",
-    # "Semantic5-T" : "data/Semantic5-T.json",
-    # "Semantic10-T" : "data/Semantic10-T.json",
-    # "Semantic40-T" : "data/Semantic40-T.json",
+    "CrisisLexT7" : "data/social_ed_data/CrisisLexT7.npy",
+    "CrisisLexT26" : "data/social_ed_data/CrisisLexT26.npy",
+    "CrisisMMD" : "data/social_ed_data/CrisisMMD.npy",
+    "CrisisNLP" : "data/social_ed_data/CrisisNLP.npy",
+    "Event2012" : "data/social_ed_data/Event2012.npy",
+    "Event2018" : "data/social_ed_data/Event2018.npy",
+    "HumAID" : "data/social_ed_data/HumAID.npy",
+    "KBP" : "data/social_ed_data/KBP.npy",
+    "MAVEN" : "data/social_ed_data/MAVEN.npy",
+    "Mix_Data" : "data/social_ed_data/Mix_Data.npy",
+    "Semantic5-T" : "data/Semantic5-T.json",
+    "Semantic10-T" : "data/Semantic10-T.json",
+    "Semantic40-T" : "data/Semantic40-T.json",
 }
 
 models = {
     "NeuML": SentenceTransformer('NeuML/pubmedbert-base-embeddings-2M', device="cpu"),
-    # "minishlab_2M": SentenceTransformer('minishlab/potion-base-2M', device="cpu"),
-    # "minishlab_4M": SentenceTransformer('minishlab/potion-base-4M', device="cpu"),
-    # "minishlab_8M": SentenceTransformer('minishlab/potion-base-8M', device="cpu"),
-    # "minishlab_32M": SentenceTransformer('minishlab/potion-retrieval-32M', device="cpu"),
-    # "stephantulkens": SentenceTransformer('stephantulkens/NIFE-mxbai-embed-large-v1_as_router', device="cpu"),
-    # "Mihaiii_Bulbasaur": SentenceTransformer('Mihaiii/Bulbasaur', device="cpu"),
-    # "Mihaiii_gte_micro_v4": SentenceTransformer('Mihaiii/gte-micro-v4', device="cpu"),
-    # "sentence_transformers_all_MiniLM_L6_v2": SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2', device="cpu"),
-    # "Snowflake": SentenceTransformer('Snowflake/snowflake-arctic-embed-xs', device="cpu"),
-    # "MongoDB": SentenceTransformer('MongoDB/mdbr-leaf-ir', device="cpu"),
-    # "intfloat": SentenceTransformer('intfloat/e5-base-v2', device="cpu"),
-    # "Alibaba_NLP": SentenceTransformer('Alibaba-NLP/gte-modernbert-base', device="cpu"),
-    # "microsoft": SentenceTransformer('microsoft/harrier-oss-v1-270m', device="cpu"),
+    "minishlab_2M": SentenceTransformer('minishlab/potion-base-2M', device="cpu"),
+    "minishlab_4M": SentenceTransformer('minishlab/potion-base-4M', device="cpu"),
+    "minishlab_8M": SentenceTransformer('minishlab/potion-base-8M', device="cpu"),
+    "minishlab_32M": SentenceTransformer('minishlab/potion-retrieval-32M', device="cpu"),
+    "stephantulkens": SentenceTransformer('stephantulkens/NIFE-mxbai-embed-large-v1_as_router', device="cpu"),
+    "Mihaiii_Bulbasaur": SentenceTransformer('Mihaiii/Bulbasaur', device="cpu"),
+    "Mihaiii_gte_micro_v4": SentenceTransformer('Mihaiii/gte-micro-v4', device="cpu"),
+    "sentence_transformers_all_MiniLM_L6_v2": SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2', device="cpu"),
+    "Snowflake": SentenceTransformer('Snowflake/snowflake-arctic-embed-xs', device="cpu"),
+    "MongoDB": SentenceTransformer('MongoDB/mdbr-leaf-ir', device="cpu"),
+    "intfloat": SentenceTransformer('intfloat/e5-base-v2', device="cpu"),
+    "Alibaba_NLP": SentenceTransformer('Alibaba-NLP/gte-modernbert-base', device="cpu"),
+    "microsoft": SentenceTransformer('microsoft/harrier-oss-v1-270m', device="cpu"),
     }
 
-class TimeoutException(Exception):
-    pass
+TIME_LIMIT = int((30_000 + 500) / 2)  # Maximum time limit in seconds (30,000 points at 2 points/sec + 500 seconds buffer)
 
 def timeout_handler(signum, frame):
-    raise TimeoutException("algorithm.start() exceeded time limit")
-
-TIME_LIMIT = int((30_000 + 500) / 2)  # Maximum time limit in seconds (30,000 points at 2 points/sec + 500 seconds buffer)
+    raise RuntimeError("algorithm.start() exceeded time limit of {} seconds.".format(TIME_LIMIT))
 
 class ThroughputLimitHistoryManager(HistoryManager):
     def __init__(self, lower_bound: float, num_points: int, *args, **kwargs):
@@ -103,12 +100,13 @@ def make_train_function(algorithm: str, max_samples:Optional[int]=30_000, throug
             data_loader = StaticJsonWrapper(instance, max_samples=max_samples, random_start_seed=seed)
         if algorithm == "embClust":
             embedding_model_name = config.get("model", "sentenceTransformers")
-            embedding_model = models.get(embedding_model_name, models["sentenceTransformers"])
+            embedding_model = models.get(embedding_model_name, models["NeuML"])
             embClust = get_embClust(data_loader=data_loader,
                                 embedding_model=embedding_model,
                                 log_interval=log_after_n_points,
                                 **config)
-            embClust.preprocessor = SimulatedEmbeddingPreprocessor(embedding_model_name, instance)
+            dataset = Path(instance).stem
+            embClust.preprocessor = SimulatedEmbeddingPreprocessor(embedding_model_name, dataset)
             return embClust
         elif algorithm == "textClust":
             return get_fastLogClust(data_loader=data_loader,
@@ -123,13 +121,17 @@ def make_train_function(algorithm: str, max_samples:Optional[int]=30_000, throug
 
         algorithm.verbose = False
         algorithm.history_manager = ThroughputLimitHistoryManager(lower_bound=throughput_limit, num_points=log_after_n_points)  # Set a lower bound for throughput (e.g., 10 points/sec)
-        signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(TIME_LIMIT)
+        
+        if(max_samples is not None):
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(TIME_LIMIT)
         start_time = time.time()
         try:
             algorithm.start()
-        finally:
+        except Exception as e:
             signal.alarm(0)  # cancel the alarm
+            raise RuntimeError(f"Algorithm failed during execution: {e}")
+        signal.alarm(0)  # cancel the alarm
         end_time = time.time()
         result = eval_against_truth(
             initial_text_assignments=algorithm.history_manager.initial_text_assignments,
@@ -160,7 +162,7 @@ if __name__ == "__main__":
     else:
         selected_datasets = [path for name, path in datasets.items() if name not in parsed_args.loo_datasets]
 
-    with open(f'experiments/smac/params_{parsed_args.algorithm}.pcs', 'r') as f:
+    with open(f'smac/params_{parsed_args.algorithm}.pcs', 'r') as f:
         configuration = pcs.read(f)
 
     output_path = Path(f"smac3_output/{parsed_args.algorithm}/loo_{parsed_args.loo_datasets}_seed_{parsed_args.seed}")
@@ -172,7 +174,7 @@ if __name__ == "__main__":
         instance_features={name: [i] for i, name in enumerate(selected_datasets)},  # Map instance names to indices
         deterministic=False,
         walltime_limit=60 * 60 * 24 * 7,
-        n_trials=250,
+        n_trials=10,
         seed=parsed_args.seed,
         crash_cost = [2.0, 2.0],  # Cost for crashing runs (e.g., due to low throughput)
         output_directory=output_path
@@ -196,6 +198,8 @@ if __name__ == "__main__":
     print ("Start evaluation of the best configuration on full datasets...")
     
     results = []
+    final_performance_path = Path(f"smac3_final_performance/{parsed_args.algorithm}/loo_{parsed_args.loo_datasets}_seed_{parsed_args.seed}.csv")
+    final_performance_path.parent.mkdir(parents=True, exist_ok=True)
     
     for i, c in enumerate(incumbents):
         for d in datasets.values():
@@ -206,10 +210,9 @@ if __name__ == "__main__":
             performance["dataset"] = d
             performance["config"] = config_name
             performance["config_id"] = str(i)
-            performance["loo_dataset"] = parsed_args.loo_datasets
+            performance["loo_datasets"] = parsed_args.loo_datasets
             performance["seed"] = parsed_args.seed
             performance["algorithm"] = parsed_args.algorithm
             results.append(performance)
+            pd.DataFrame(results).to_csv(final_performance_path, index=False)
             
-    df = pd.DataFrame(results)
-    df.to_csv(f"smac3_final_performance/{parsed_args.algorithm}/loo_{parsed_args.loo_datasets}_seed_{parsed_args.seed}.csv", index=False)

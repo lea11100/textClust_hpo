@@ -8,9 +8,12 @@
 #SBATCH --partition=normal
 #SBATCH --account=hpc-prf-dedsm
 #SBATCH --output=output/smac/%a.out
-#SBATCH --array=0-199
+#SBATCH --array=0-159
 
-DATASETS=( "Semantic10-T" "Semantic40-T" "Semantic5-T" "NT" "NTS" "NTSO" "SO-T" "News-T" "Trends-T" "Tweets-T" )
+DATASETS=( "Arabic_Twitter Semantic40-T" "KBP Arabic_7"
+           "Mix_Data CrisisLexT6" "Semantic10-T Event2018"
+           "MAVEN HumAID" "Semantic5-T CrisisLexT7"
+           "CrisisNLP CrisisMMD" "Event2012 CrisisLexT26" )
 SEEDS=( 1 2 3 4 5 6 7 8 9 10 )
 ALGORITHMS=( "textClust" "embClust" )
 
@@ -32,4 +35,4 @@ echo "Running with dataset: $DATASET, seed: $SEED, algorithm: $ALGORITHM"
 module load lang/Python/3.11.3-GCCcore-12.3.0
 source /scratch/hpc-prf-dedsm/sussekl/textClust/.textClustEnv/bin/activate
 
-python experiments/smac/optimize.py --loo_dataset $DATASET --seed $SEED --algorithm $ALGORITHM
+python experiments/smac/optimize.py --seed $SEED --algorithm $ALGORITHM --loo_datasets $DATASETS
