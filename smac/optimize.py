@@ -10,6 +10,8 @@ import time
 from typing import List, Optional, Tuple
 import numpy as np
 
+os.environ.setdefault("NLTK_DISABLE_IMPORT_SECURITY", "1")
+
 import pandas as pd
 
 
@@ -33,56 +35,40 @@ from textClust.history.manager import HistoryManager
 from textClust.online.clusterer import Microclusterer
 from textClust.preprocessing.preprocessor import SimulatedEmbeddingPreprocessor
 
-# datasets = {
-#     "Semantic10-T": "examples/data/Semantic10-T.json",
-#     "Semantic40-T": "examples/data/Semantic40-T.json",
-#     "Semantic5-T": "examples/data/Semantic5-T.json",
-#     "NT": "examples/data/NT.json",
-#     "NTS": "examples/data/NTS.json",
-#     "NTSO": "examples/data/NTSO-T.json",
-#     "SO-T": "examples/data/SO-T.json",
-#     "News-T": "examples/data/News-T.json",
-#     "Trends-T": "examples/data/Trends-T.json",
-#     "Tweets-T": "examples/data/Tweets-T.json",
-# }
-
 datasets = {
     "Arabic_7" : "data/social_ed_data/Arabic_7.npy",
     "Arabic_Twitter" : "data/social_ed_data/Arabic_Twitter.npy",
     "CrisisLexT6" : "data/social_ed_data/CrisisLexT6.npy",
-    "CrisisLexT7" : "data/social_ed_data/CrisisLexT7.npy",
-    "CrisisLexT26" : "data/social_ed_data/CrisisLexT26.npy",
-    "CrisisMMD" : "data/social_ed_data/CrisisMMD.npy",
-    "CrisisNLP" : "data/social_ed_data/CrisisNLP.npy",
-    "Event2012" : "data/social_ed_data/Event2012.npy",
-    "Event2018" : "data/social_ed_data/Event2018.npy",
-    "HumAID" : "data/social_ed_data/HumAID.npy",
-    "KBP" : "data/social_ed_data/KBP.npy",
-    "MAVEN" : "data/social_ed_data/MAVEN.npy",
-    "Mix_Data" : "data/social_ed_data/Mix_Data.npy",
-    "Semantic5-T" : "data/Semantic5-T.json",
-    "Semantic10-T" : "data/Semantic10-T.json",
-    "Semantic40-T" : "data/Semantic40-T.json",
+    # "CrisisLexT7" : "data/social_ed_data/CrisisLexT7.npy",
+    # "CrisisLexT26" : "data/social_ed_data/CrisisLexT26.npy",
+    # "CrisisMMD" : "data/social_ed_data/CrisisMMD.npy",
+    # "CrisisNLP" : "data/social_ed_data/CrisisNLP.npy",
+    # "Event2012" : "data/social_ed_data/Event2012.npy",
+    # "Event2018" : "data/social_ed_data/Event2018.npy",
+    # "HumAID" : "data/social_ed_data/HumAID.npy",
+    # "KBP" : "data/social_ed_data/KBP.npy",
+    # "MAVEN" : "data/social_ed_data/MAVEN.npy",
+    # "Mix_Data" : "data/social_ed_data/Mix_Data.npy",
+    # "Semantic5-T" : "data/Semantic5-T.json",
+    # "Semantic10-T" : "data/Semantic10-T.json",
+    # "Semantic40-T" : "data/Semantic40-T.json",
 }
-
-# embedding_model_name = 'ibm-granite/granite-embedding-107m-multilingual'
-# embedding_model = SentenceTransformer(embedding_model_name, device="cpu")
 
 models = {
     "NeuML": SentenceTransformer('NeuML/pubmedbert-base-embeddings-2M', device="cpu"),
-    "minishlab_2M": SentenceTransformer('minishlab/potion-base-2M', device="cpu"),
-    "minishlab_4M": SentenceTransformer('minishlab/potion-base-4M', device="cpu"),
-    "minishlab_8M": SentenceTransformer('minishlab/potion-base-8M', device="cpu"),
-    "minishlab_32M": SentenceTransformer('minishlab/potion-retrieval-32M', device="cpu"),
-    "stephantulkens": SentenceTransformer('stephantulkens/NIFE-mxbai-embed-large-v1_as_router', device="cpu"),
-    "Mihaiii_Bulbasaur": SentenceTransformer('Mihaiii/Bulbasaur', device="cpu"),
-    "Mihaiii_gte_micro_v4": SentenceTransformer('Mihaiii/gte-micro-v4', device="cpu"),
-    "sentence_transformers_all_MiniLM_L6_v2": SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2', device="cpu"),
-    "Snowflake": SentenceTransformer('Snowflake/snowflake-arctic-embed-xs', device="cpu"),
-    "MongoDB": SentenceTransformer('MongoDB/mdbr-leaf-ir', device="cpu"),
-    "intfloat": SentenceTransformer('intfloat/e5-base-v2', device="cpu"),
-    "Alibaba_NLP": SentenceTransformer('Alibaba-NLP/gte-modernbert-base', device="cpu"),
-    "microsoft": SentenceTransformer('microsoft/harrier-oss-v1-270m', device="cpu"),
+    # "minishlab_2M": SentenceTransformer('minishlab/potion-base-2M', device="cpu"),
+    # "minishlab_4M": SentenceTransformer('minishlab/potion-base-4M', device="cpu"),
+    # "minishlab_8M": SentenceTransformer('minishlab/potion-base-8M', device="cpu"),
+    # "minishlab_32M": SentenceTransformer('minishlab/potion-retrieval-32M', device="cpu"),
+    # "stephantulkens": SentenceTransformer('stephantulkens/NIFE-mxbai-embed-large-v1_as_router', device="cpu"),
+    # "Mihaiii_Bulbasaur": SentenceTransformer('Mihaiii/Bulbasaur', device="cpu"),
+    # "Mihaiii_gte_micro_v4": SentenceTransformer('Mihaiii/gte-micro-v4', device="cpu"),
+    # "sentence_transformers_all_MiniLM_L6_v2": SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2', device="cpu"),
+    # "Snowflake": SentenceTransformer('Snowflake/snowflake-arctic-embed-xs', device="cpu"),
+    # "MongoDB": SentenceTransformer('MongoDB/mdbr-leaf-ir', device="cpu"),
+    # "intfloat": SentenceTransformer('intfloat/e5-base-v2', device="cpu"),
+    # "Alibaba_NLP": SentenceTransformer('Alibaba-NLP/gte-modernbert-base', device="cpu"),
+    # "microsoft": SentenceTransformer('microsoft/harrier-oss-v1-270m', device="cpu"),
     }
 
 class TimeoutException(Exception):
@@ -163,7 +149,7 @@ def make_train_function(algorithm: str, max_samples:Optional[int]=30_000, throug
 # Add args for seed and instance selection if needed
 args = argparse.ArgumentParser()
 args.add_argument("--seed", type=int, default=1, help="Random seed for SMAC (default: 1).")
-args.add_argument("--loo_datasets", type=list, default="none", help="Dataset to leave out for evaluation (default: 'none').")
+args.add_argument("--loo_datasets", nargs="+", type=str, default="none", help="Datasets to leave out for evaluation (default: 'none').")
 args.add_argument("--algorithm", type=str, default="embClust", choices=["embClust", "textClust"], help="Algorithm to optimize (default: 'embClust').")
     
 if __name__ == "__main__":
