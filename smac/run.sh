@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=7-12
+#SBATCH --time=02:00:00
 #SBATCH --mem=4G
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=sussekl@mail.uni-paderborn.de
@@ -33,6 +33,6 @@ echo "START runexperiment call at $(date '+%Y-%m-%d %H:%M:%S')"
 echo "Running with dataset: $DATASET, seed: $SEED, algorithm: $ALGORITHM"
 
 module load lang/Python/3.11.3-GCCcore-12.3.0
-source /scratch/hpc-prf-dedsm/sussekl/textClust/.textClustEnv/bin/activate
+source /scratch/hpc-prf-dedsm/sussekl/textClust_hpo/.textClust_hpo_env/bin/activate
 
-python experiments/smac/optimize.py --seed $SEED --algorithm $ALGORITHM --loo_datasets $DATASETS
+python smac/optimize.py --seed $SEED --algorithm $ALGORITHM --loo_datasets $DATASETS

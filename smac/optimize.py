@@ -22,7 +22,6 @@ from textClust.offline.cluster import Macrocluster
 # sys.path.append(str(ROOT / "../ext_lib/mosmac"))
 
 from ConfigSpace import Configuration, ConfigurationSpace
-from sentence_transformers import SentenceTransformer
 from smac.facade import MultiObjectiveFacade
 from smac import HyperparameterOptimizationFacade, Scenario
 from ConfigSpace.read_and_write import pcs_new as pcs
@@ -54,23 +53,6 @@ datasets = {
     "Semantic40-T" : "data/Semantic40-T.json",
 }
 
-models = {
-    "NeuML": SentenceTransformer('NeuML/pubmedbert-base-embeddings-2M', device="cpu"),
-    "minishlab_2M": SentenceTransformer('minishlab/potion-base-2M', device="cpu"),
-    "minishlab_4M": SentenceTransformer('minishlab/potion-base-4M', device="cpu"),
-    "minishlab_8M": SentenceTransformer('minishlab/potion-base-8M', device="cpu"),
-    "minishlab_32M": SentenceTransformer('minishlab/potion-retrieval-32M', device="cpu"),
-    "stephantulkens": SentenceTransformer('stephantulkens/NIFE-mxbai-embed-large-v1_as_router', device="cpu"),
-    "Mihaiii_Bulbasaur": SentenceTransformer('Mihaiii/Bulbasaur', device="cpu"),
-    "Mihaiii_gte_micro_v4": SentenceTransformer('Mihaiii/gte-micro-v4', device="cpu"),
-    "sentence_transformers_all_MiniLM_L6_v2": SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2', device="cpu"),
-    "Snowflake": SentenceTransformer('Snowflake/snowflake-arctic-embed-xs', device="cpu"),
-    "MongoDB": SentenceTransformer('MongoDB/mdbr-leaf-ir', device="cpu"),
-    "intfloat": SentenceTransformer('intfloat/e5-base-v2', device="cpu"),
-    "Alibaba_NLP": SentenceTransformer('Alibaba-NLP/gte-modernbert-base', device="cpu"),
-    "microsoft": SentenceTransformer('microsoft/harrier-oss-v1-270m', device="cpu"),
-    }
-
 TIME_LIMIT = int((30_000 + 500) / 2)  # Maximum time limit in seconds (30,000 points at 2 points/sec + 500 seconds buffer)
 
 def timeout_handler(signum, frame):
@@ -100,9 +82,8 @@ def make_train_function(algorithm: str, max_samples:Optional[int]=30_000, throug
             data_loader = StaticJsonWrapper(instance, max_samples=max_samples, random_start_seed=seed)
         if algorithm == "embClust":
             embedding_model_name = config.get("model", "sentenceTransformers")
-            embedding_model = models.get(embedding_model_name, models["NeuML"])
             embClust = get_embClust(data_loader=data_loader,
-                                embedding_model=embedding_model,
+                                embedding_model=None, # The embedding model will be simulated in the preprocessor
                                 log_interval=log_after_n_points,
                                 **config)
             dataset = Path(instance).stem
