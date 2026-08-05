@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH --time=02:00:00
-#SBATCH --mem=4G
+#SBATCH --time=12-12
+#SBATCH --mem=16G
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=sussekl@mail.uni-paderborn.de
 #SBATCH --job-name=text_clust_hpo
 #SBATCH --cpus-per-task=1
 #SBATCH --partition=normal
 #SBATCH --account=hpc-prf-dedsm
-#SBATCH --output=output/smac/%a.out
+#SBATCH --output=smac3_logs/%a.out
 #SBATCH --array=0-159
 
 DATASETS=( "Arabic_Twitter Semantic40-T" "KBP Arabic_7"
@@ -35,4 +35,4 @@ echo "Running with dataset: $DATASET, seed: $SEED, algorithm: $ALGORITHM"
 module load lang/Python/3.11.3-GCCcore-12.3.0
 source /scratch/hpc-prf-dedsm/sussekl/textClust_hpo/.textClust_hpo_env/bin/activate
 
-python smac/optimize.py --seed $SEED --algorithm $ALGORITHM --loo_datasets $DATASETS
+python -u smac/optimize.py --seed $SEED --algorithm $ALGORITHM --loo_datasets $DATASET

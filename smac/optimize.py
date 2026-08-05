@@ -137,6 +137,8 @@ args.add_argument("--algorithm", type=str, default="embClust", choices=["embClus
     
 if __name__ == "__main__":
     parsed_args = args.parse_args()
+    
+    print(f"Starting optimization with seed {parsed_args.seed}, algorithm {parsed_args.algorithm}, and leave-one-out datasets: {parsed_args.loo_datasets}")
 
     if parsed_args.loo_datasets == "none":
         selected_datasets = list(datasets.values())
@@ -147,6 +149,7 @@ if __name__ == "__main__":
         configuration = pcs.read(f)
 
     output_path = Path(f"smac3_output/{parsed_args.algorithm}/loo_{parsed_args.loo_datasets}_seed_{parsed_args.seed}")
+    print(f"Output path for SMAC results: {output_path}")
     # Scenario object specifying the optimization environment
     scenario = Scenario(
         configuration,
@@ -155,25 +158,25 @@ if __name__ == "__main__":
         instance_features={name: [i] for i, name in enumerate(selected_datasets)},  # Map instance names to indices
         deterministic=False,
         walltime_limit=60 * 60 * 24 * 7,
-        n_trials=10,
+        n_trials=250,
         seed=parsed_args.seed,
         crash_cost = [2.0, 2.0],  # Cost for crashing runs (e.g., due to low throughput)
         output_directory=output_path
     )
 
     # Use SMAC to find the best configuration/hyperparameters
-    smac = MultiObjectiveFacade(scenario, make_train_function(parsed_args.algorithm))  # Use multi-objective optimization if needed
+    smac = MultiObjectiveFacade(scenario, make_train_function(parsed_args.algorithm, max_samples=30_000))  # Use multi-objective optimization if needed
     incumbents = smac.optimize()
     assert isinstance(incumbents, list), "Expected incumbents to be a list of configurations."
 
     print("Best found configuration:", incumbents)
-    
     #Store the best configuration in a JSON file for later use
     config_name = f"best_config_loo_{parsed_args.loo_datasets}_seed_{parsed_args.seed}.json"
     best_config_path = f"smac3_best_configs/{parsed_args.algorithm}/{config_name}"
     os.makedirs(os.path.dirname(best_config_path), exist_ok=True)
     with open(best_config_path, 'w') as f:
         json.dump([dict(i.items()) for i in incumbents], f, indent=4)
+    print(f"Best configuration saved to: {best_config_path}")
         
     print ("Optimization completed. Best configuration saved to:", best_config_path)
     print ("Start evaluation of the best configuration on full datasets...")
@@ -184,16 +187,20 @@ if __name__ == "__main__":
     
     for i, c in enumerate(incumbents):
         for d in datasets.values():
-            print(f"Evaluating configuration on dataset: {d}")
-            train = make_train_function(parsed_args.algorithm, max_samples=None, throughput_limit=0.0, log_after_n_points=1000)
-            performance = train(c, seed=None, instance=d)[1]
-            print("FINISHED EVALUATION:", d, config_name, i, parsed_args.loo_datasets, parsed_args.seed, parsed_args.algorithm, performance)
-            performance["dataset"] = d
-            performance["config"] = config_name
-            performance["config_id"] = str(i)
-            performance["loo_datasets"] = parsed_args.loo_datasets
-            performance["seed"] = parsed_args.seed
-            performance["algorithm"] = parsed_args.algorithm
-            results.append(performance)
-            pd.DataFrame(results).to_csv(final_performance_path, index=False)
+            try:
+                print(f"Evaluating configuration on dataset: {d}")
+                train = make_train_function(parsed_args.algorithm, throughput_limit=0.0, log_after_n_points=1000)
+                performance = train(c, seed=None, instance=d)[1]
+                print("FINISHED EVALUATION:", d, config_name, i, parsed_args.loo_datasets, parsed_args.seed, parsed_args.algorithm, performance)
+                performance["dataset"] = d
+                performance["config"] = config_name
+                performance["config_id"] = str(i)
+                performance["loo_datasets"] = parsed_args.loo_datasets
+                performance["seed"] = parsed_args.seed
+                performance["algorithm"] = parsed_args.algorithm
+                results.append(performance)
+                pd.DataFrame(results).to_csv(final_performance_path, index=False)
+            except Exception as e:
+                print(f"Error evaluating configuration on dataset {d}: {e}")
+                continue
             
