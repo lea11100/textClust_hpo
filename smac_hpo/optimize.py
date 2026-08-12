@@ -9,21 +9,20 @@ from pathlib import Path
 import time
 from typing import List, Optional, Tuple
 import numpy as np
+from sklearn import metrics
 
 os.environ.setdefault("NLTK_DISABLE_IMPORT_SECURITY", "1")
 
 import pandas as pd
 
+sys.path.append("/Users/lms/Documents/Misc/local_packages/pygmo2/build")
 
 from textClust.history.manager import HistoryManager
 from textClust.offline.cluster import Macrocluster
 
-# ROOT = Path(__file__).resolve().parent  # directory of this file
-# sys.path.append(str(ROOT / "../ext_lib/mosmac"))
-
 from ConfigSpace import Configuration, ConfigurationSpace
 from smac.facade import MultiObjectiveFacade
-from smac import HyperparameterOptimizationFacade, Scenario
+from smac import Scenario
 from ConfigSpace.read_and_write import pcs_new as pcs
 
 from textClust.algorithms.presets import get_embClust, get_fastLogClust
@@ -34,23 +33,26 @@ from textClust.history.manager import HistoryManager
 from textClust.online.clusterer import Microclusterer
 from textClust.preprocessing.preprocessor import SimulatedEmbeddingPreprocessor
 
+social_ed_path = "data/social_ed_data"
+data_path = "data"
+
 datasets = {
-    "Arabic_7" : "data/social_ed_data/Arabic_7.npy",
-    "Arabic_Twitter" : "data/social_ed_data/Arabic_Twitter.npy",
-    "CrisisLexT6" : "data/social_ed_data/CrisisLexT6.npy",
-    "CrisisLexT7" : "data/social_ed_data/CrisisLexT7.npy",
-    "CrisisLexT26" : "data/social_ed_data/CrisisLexT26.npy",
-    "CrisisMMD" : "data/social_ed_data/CrisisMMD.npy",
-    "CrisisNLP" : "data/social_ed_data/CrisisNLP.npy",
-    "Event2012" : "data/social_ed_data/Event2012.npy",
-    "Event2018" : "data/social_ed_data/Event2018.npy",
-    "HumAID" : "data/social_ed_data/HumAID.npy",
-    "KBP" : "data/social_ed_data/KBP.npy",
-    "MAVEN" : "data/social_ed_data/MAVEN.npy",
-    "Mix_Data" : "data/social_ed_data/Mix_Data.npy",
-    "Semantic5-T" : "data/Semantic5-T.json",
-    "Semantic10-T" : "data/Semantic10-T.json",
-    "Semantic40-T" : "data/Semantic40-T.json",
+    "Arabic_7" : f"{social_ed_path}/Arabic_7.npy",
+    "Arabic_Twitter" : f"{social_ed_path}/Arabic_Twitter.npy",
+    "CrisisLexT6" : f"{social_ed_path}/CrisisLexT6.npy",
+    "CrisisLexT7" : f"{social_ed_path}/CrisisLexT7.npy",
+    "CrisisLexT26" : f"{social_ed_path}/CrisisLexT26.npy",
+    "CrisisMMD" : f"{social_ed_path}/CrisisMMD.npy",
+    "CrisisNLP" : f"{social_ed_path}/CrisisNLP.npy",
+    "Event2012" : f"{social_ed_path}/Event2012.npy",
+    "Event2018" : f"{social_ed_path}/Event2018.npy",
+    "HumAID" : f"{social_ed_path}/HumAID.npy",
+    "KBP" : f"{social_ed_path}/KBP.npy",
+    "MAVEN" : f"{social_ed_path}/MAVEN.npy",
+    "Mix_Data" : f"{social_ed_path}/Mix_Data.npy",
+    "Semantic5-T" : f"{data_path}/Semantic5-T.json",
+    "Semantic10-T" : f"{data_path}/Semantic10-T.json",
+    "Semantic40-T" : f"{data_path}/Semantic40-T.json",
 }
 
 TIME_LIMIT = int((30_000 + 500) / 2)  # Maximum time limit in seconds (30,000 points at 2 points/sec + 500 seconds buffer)
@@ -127,13 +129,74 @@ def make_train_function(algorithm: str, max_samples:Optional[int]=30_000, throug
                 "-throughput":-np.log(avg_throughput)}, result # Negate because SMAC minimizes by default
     
     return train
+
+def make_train_function_ray(max_samples:Optional[int]=30_000):
     
+    sys.path.append("/Users/lms/Documents/Forschung/textClust_hpo/")
+    sys.path.append("/Users/lms/Documents/Forschung/textClust_hpo/other_clusterer/twitter_incremental_clustering")
+    from other_clusterer.twitter_incremental_clustering.run_detection import run as run_ray
+    
+    
+    def train(config: Configuration, seed: Optional[int] = 1, instance:str = "") -> Tuple[dict[str, float], dict[str, str]]:
+        if(max_samples is not None):
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(TIME_LIMIT)
+        start_time = time.time()
+        try:
+            config_dict = dict(config)
+            config_dict["model"] = [config_dict.get("model", "")]
+            config_dict["dataset"] = instance
+            config_dict["seed"] = seed
+            config_dict["max_samples"] = max_samples
+            config_dict["output_dir"] = "."
+            config_dict["lang"] = "en"
+            config_dict["sub_model"] = "None"
+            y_true, y_pred_final = run_ray(config_dict)
+        except Exception as e:
+            signal.alarm(0)  # cancel the alarm
+            raise RuntimeError(f"Algorithm failed during execution: {e}")
+        signal.alarm(0)  # cancel the alarm
+        end_time = time.time()
+        rand_final = metrics.rand_score(y_true, y_pred_final)
+        adj_rand_final = metrics.adjusted_rand_score(y_true, y_pred_final)
+        mi_final = metrics.mutual_info_score(y_true, y_pred_final)
+        adj_mi_final = metrics.adjusted_mutual_info_score(y_true, y_pred_final)
+        norm_mi_final = metrics.normalized_mutual_info_score(y_true, y_pred_final)
+        homogeneity_final, completeness_final, v_measure_final = metrics.homogeneity_completeness_v_measure(y_true, y_pred_final)
+        fowlkes_mallows_final = metrics.fowlkes_mallows_score(y_true, y_pred_final)
+        
+        num_evaluated_points = len(y_true)
+        num_clusters_final = len(np.unique(y_pred_final))
+        num_clusters_true = len(np.unique(y_true))
+        
+        result = {
+            "rand_final": rand_final,
+            "adj_rand_final": adj_rand_final,
+            "mutual_info_final": mi_final,
+            "adj_mutual_info_final": adj_mi_final,
+            "normalized_mutual_info_final": norm_mi_final,
+            "homogeneity_final": homogeneity_final,
+            "completeness_final": completeness_final,
+            "v_measure_final": v_measure_final,
+            "fowlkes_mallows_final": fowlkes_mallows_final,
+            "num_evaluated_points": num_evaluated_points,
+            "num_clusters_final": num_clusters_final,
+            "num_clusters_true": num_clusters_true
+        }
+        avg_throughput = num_evaluated_points / (end_time - start_time)
+        result["avg_throughput"] = avg_throughput
+        result["total_time"] = end_time - start_time
+        
+        return {"-adj_mutual_info":-1 * result.get("adj_mutual_info_final", 0.0), 
+                "-throughput":-np.log(avg_throughput)}, result # Negate because SMAC minimizes by default
+    
+    return train
 
 # Add args for seed and instance selection if needed
 args = argparse.ArgumentParser()
 args.add_argument("--seed", type=int, default=1, help="Random seed for SMAC (default: 1).")
 args.add_argument("--loo_datasets", nargs="+", type=str, default="none", help="Datasets to leave out for evaluation (default: 'none').")
-args.add_argument("--algorithm", type=str, default="embClust", choices=["embClust", "textClust"], help="Algorithm to optimize (default: 'embClust').")
+args.add_argument("--algorithm", type=str, default="embClust", choices=["embClust", "textClust", "inc_clust_ray"], help="Algorithm to optimize (default: 'embClust').")
     
 if __name__ == "__main__":
     parsed_args = args.parse_args()
@@ -145,7 +208,7 @@ if __name__ == "__main__":
     else:
         selected_datasets = [path for name, path in datasets.items() if name not in parsed_args.loo_datasets]
 
-    with open(f'smac/params_{parsed_args.algorithm}.pcs', 'r') as f:
+    with open(f'smac_hpo/params_{parsed_args.algorithm}.pcs', 'r') as f:
         configuration = pcs.read(f)
 
     output_path = Path(f"smac3_output/{parsed_args.algorithm}/loo_{parsed_args.loo_datasets}_seed_{parsed_args.seed}")
@@ -158,14 +221,19 @@ if __name__ == "__main__":
         instance_features={name: [i] for i, name in enumerate(selected_datasets)},  # Map instance names to indices
         deterministic=False,
         walltime_limit=60 * 60 * 24 * 7,
-        n_trials=250,
+        n_trials=50,
         seed=parsed_args.seed,
         crash_cost = [2.0, 2.0],  # Cost for crashing runs (e.g., due to low throughput)
         output_directory=output_path
     )
 
     # Use SMAC to find the best configuration/hyperparameters
-    smac = MultiObjectiveFacade(scenario, make_train_function(parsed_args.algorithm, max_samples=30_000))  # Use multi-objective optimization if needed
+    if parsed_args.algorithm == "inc_clust_ray":
+        train_function = make_train_function_ray(max_samples=2_000)
+    else:
+        train_function = make_train_function(parsed_args.algorithm, max_samples=30_000, throughput_limit=2.0, log_after_n_points=1000)
+    
+    smac = MultiObjectiveFacade(scenario, train_function)  # Use multi-objective optimization if needed
     incumbents = smac.optimize()
     assert isinstance(incumbents, list), "Expected incumbents to be a list of configurations."
 
@@ -189,7 +257,10 @@ if __name__ == "__main__":
         for d in datasets.values():
             try:
                 print(f"Evaluating configuration on dataset: {d}")
-                train = make_train_function(parsed_args.algorithm, throughput_limit=0.0, log_after_n_points=1000)
+                if parsed_args.algorithm == "inc_clust_ray":
+                    train = make_train_function_ray()
+                else:
+                    train = make_train_function(parsed_args.algorithm)
                 performance = train(c, seed=None, instance=d)[1]
                 print("FINISHED EVALUATION:", d, config_name, i, parsed_args.loo_datasets, parsed_args.seed, parsed_args.algorithm, performance)
                 performance["dataset"] = d

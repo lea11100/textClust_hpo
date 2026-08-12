@@ -1,0 +1,5 @@
+model categorical {NeuML, minishlab_2M, minishlab_4M, minishlab_8M, minishlab_32M, stephantulkens, Mihaiii_Bulbasaur, Mihaiii_gte_micro_v4, sentence_transformers_all_MiniLM_L6_v2, Snowflake, MongoDB, intfloat, Alibaba_NLP, microsoft} [sentence_transformers_all_MiniLM_L6_v2]
+
+threshold real [0.0001, 1.0] [0.55] 
+window integer [1, 2000] [24]
+batch_size integer [1, 2000] [8]
