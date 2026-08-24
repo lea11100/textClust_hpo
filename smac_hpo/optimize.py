@@ -121,9 +121,12 @@ def make_train_function(algorithm: str, max_samples:Optional[int]=30_000, throug
             final_text_assignments=algorithm.history_manager.get_final_assignments(),
             true_assignments=algorithm.history_manager.true_assignments
         )
-        avg_throughput = len(algorithm.history_manager.true_assignments) / (end_time - start_time)
+        time_taken = end_time - start_time + 10e-10
+        if algorithm.preprocessor and isinstance(algorithm.preprocessor, SimulatedEmbeddingPreprocessor):
+            time_taken += algorithm.preprocessor.saved_time  # Add the simulated embedding time to the total time
+        avg_throughput = len(algorithm.history_manager.true_assignments) / time_taken
         result["avg_throughput"] = avg_throughput
-        result["total_time"] = end_time - start_time
+        result["total_time"] = time_taken
         
         return {"-adj_mutual_info":-1 * result.get("adj_mutual_info", 0.0), 
                 "-throughput":-np.log(avg_throughput)}, result # Negate because SMAC minimizes by default
