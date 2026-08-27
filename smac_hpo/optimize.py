@@ -31,25 +31,26 @@ from textClust.utils.eval import eval_against_truth
 from textClust.offline.clusterer import SimpleMacroClusterer
 from textClust.history.manager import HistoryManager
 from textClust.online.clusterer import Microclusterer
-from textClust.preprocessing.preprocessor import SimulatedEmbeddingPreprocessor
+from textClust.preprocessing.preprocessor import SimulatedEmbeddingPreprocessor, TFIDFPreprocessorWithTranslation
 
-social_ed_path = "data/social_ed_data"
-data_path = "data"
+data_path = "/Users/lms/Sciebo/Data/textClust_stream_data/raw_data"
+translation_path = "/Users/lms/Sciebo/Data/textClust_stream_data/translated_no_emojis"
+embedded_data_path = "/Users/lms/Sciebo/Data/textClust_stream_data/embedded"
 
 datasets = {
-    "Arabic_7" : f"{social_ed_path}/Arabic_7.npy",
-    "Arabic_Twitter" : f"{social_ed_path}/Arabic_Twitter.npy",
-    "CrisisLexT6" : f"{social_ed_path}/CrisisLexT6.npy",
-    "CrisisLexT7" : f"{social_ed_path}/CrisisLexT7.npy",
-    "CrisisLexT26" : f"{social_ed_path}/CrisisLexT26.npy",
-    "CrisisMMD" : f"{social_ed_path}/CrisisMMD.npy",
-    "CrisisNLP" : f"{social_ed_path}/CrisisNLP.npy",
-    "Event2012" : f"{social_ed_path}/Event2012.npy",
-    "Event2018" : f"{social_ed_path}/Event2018.npy",
-    "HumAID" : f"{social_ed_path}/HumAID.npy",
-    "KBP" : f"{social_ed_path}/KBP.npy",
-    "MAVEN" : f"{social_ed_path}/MAVEN.npy",
-    "Mix_Data" : f"{social_ed_path}/Mix_Data.npy",
+   # "Arabic_7" : f"{data_path}/Arabic_7.npy",
+   # "Arabic_Twitter" : f"{data_path}/Arabic_Twitter.npy",
+    "CrisisLexT6" : f"{data_path}/CrisisLexT6.npy",
+    "CrisisLexT7" : f"{data_path}/CrisisLexT7.npy",
+    "CrisisLexT26" : f"{data_path}/CrisisLexT26.npy",
+    "CrisisMMD" : f"{data_path}/CrisisMMD.npy",
+    "CrisisNLP" : f"{data_path}/CrisisNLP.npy",
+    "Event2012" : f"{data_path}/Event2012.npy",
+   # "Event2018" : f"{data_path}/Event2018.npy",
+    "HumAID" : f"{data_path}/HumAID.npy",
+    "KBP" : f"{data_path}/KBP.npy",
+    "MAVEN" : f"{data_path}/MAVEN.npy",
+    "Mix_Data" : f"{data_path}/Mix_Data.npy",
     "Semantic5-T" : f"{data_path}/Semantic5-T.json",
     "Semantic10-T" : f"{data_path}/Semantic10-T.json",
     "Semantic40-T" : f"{data_path}/Semantic40-T.json",
@@ -88,13 +89,14 @@ def make_train_function(algorithm: str, max_samples:Optional[int]=30_000, throug
                                 embedding_model=None, # The embedding model will be simulated in the preprocessor
                                 log_interval=log_after_n_points,
                                 **config)
-            dataset = Path(instance).stem
-            embClust.preprocessor = SimulatedEmbeddingPreprocessor(embedding_model_name, dataset)
+            embClust.preprocessor = SimulatedEmbeddingPreprocessor(embedding_model_name, dataset=Path(instance).stem, folder=embedded_data_path)
             return embClust
         elif algorithm == "textClust":
-            return get_fastLogClust(data_loader=data_loader,
+            textClust = get_fastLogClust(data_loader=data_loader,
                                  log_interval=log_after_n_points,
                                  **config)
+            textClust.preprocessor = TFIDFPreprocessorWithTranslation(dataset=Path(instance).stem, folder=translation_path)
+            return textClust
         else: 
             raise ValueError(f"Unknown algorithm: {algorithm}")
         
@@ -154,7 +156,7 @@ def make_train_function_ray(max_samples:Optional[int]=30_000):
             config_dict["output_dir"] = "."
             config_dict["lang"] = "en"
             config_dict["sub_model"] = "None"
-            y_true, y_pred_final = run_ray(config_dict)
+            y_true, y_pred_final, stats = run_ray(config_dict)
         except Exception as e:
             signal.alarm(0)  # cancel the alarm
             raise RuntimeError(f"Algorithm failed during execution: {e}")
@@ -186,9 +188,12 @@ def make_train_function_ray(max_samples:Optional[int]=30_000):
             "num_clusters_final": num_clusters_final,
             "num_clusters_true": num_clusters_true
         }
-        avg_throughput = num_evaluated_points / (end_time - start_time)
+        time_taken = end_time - start_time + 10e-10
+        if "embedding_time_s" in stats.columns:
+            time_taken += stats["embedding_time_s"].sum()  # Add the simulated embedding time to the total time
+        avg_throughput = num_evaluated_points / time_taken
         result["avg_throughput"] = avg_throughput
-        result["total_time"] = end_time - start_time
+        result["total_time"] = time_taken
         
         return {"-adj_mutual_info":-1 * result.get("adj_mutual_info_final", 0.0), 
                 "-throughput":-np.log(avg_throughput)}, result # Negate because SMAC minimizes by default
@@ -200,11 +205,20 @@ args = argparse.ArgumentParser()
 args.add_argument("--seed", type=int, default=1, help="Random seed for SMAC (default: 1).")
 args.add_argument("--loo_datasets", nargs="+", type=str, default="none", help="Datasets to leave out for evaluation (default: 'none').")
 args.add_argument("--algorithm", type=str, default="embClust", choices=["embClust", "textClust", "inc_clust_ray"], help="Algorithm to optimize (default: 'embClust').")
+args.add_argument("--n_trials", "--n-trials", type=int, default=250, help="Number of optimization trials (default: 250).")
+args.add_argument("--max_samples", "--max-samples", type=int, default=30_000, help="Maximum number of samples processed per run (default: 30000).")
     
 if __name__ == "__main__":
     parsed_args = args.parse_args()
     
-    print(f"Starting optimization with seed {parsed_args.seed}, algorithm {parsed_args.algorithm}, and leave-one-out datasets: {parsed_args.loo_datasets}")
+    if parsed_args.n_trials < 1:
+        args.error("--n_trials must be at least 1")
+    if parsed_args.max_samples < 1:
+        args.error("--max_samples must be at least 1")
+
+    print(f"Starting optimization with seed {parsed_args.seed}, algorithm {parsed_args.algorithm}, "
+          f"{parsed_args.n_trials} trials with {parsed_args.max_samples} samples per run, "
+          f"and leave-one-out datasets: {parsed_args.loo_datasets}")
 
     if parsed_args.loo_datasets == "none":
         selected_datasets = list(datasets.values())
@@ -224,7 +238,7 @@ if __name__ == "__main__":
         instance_features={name: [i] for i, name in enumerate(selected_datasets)},  # Map instance names to indices
         deterministic=False,
         walltime_limit=60 * 60 * 24 * 7,
-        n_trials=50,
+        n_trials=parsed_args.n_trials,
         seed=parsed_args.seed,
         crash_cost = [2.0, 2.0],  # Cost for crashing runs (e.g., due to low throughput)
         output_directory=output_path
@@ -232,9 +246,9 @@ if __name__ == "__main__":
 
     # Use SMAC to find the best configuration/hyperparameters
     if parsed_args.algorithm == "inc_clust_ray":
-        train_function = make_train_function_ray(max_samples=2_000)
+        train_function = make_train_function_ray(max_samples=parsed_args.max_samples)
     else:
-        train_function = make_train_function(parsed_args.algorithm, max_samples=30_000, throughput_limit=2.0, log_after_n_points=1000)
+        train_function = make_train_function(parsed_args.algorithm, max_samples=parsed_args.max_samples, throughput_limit=2.0, log_after_n_points=1000)
     
     smac = MultiObjectiveFacade(scenario, train_function)  # Use multi-objective optimization if needed
     incumbents = smac.optimize()

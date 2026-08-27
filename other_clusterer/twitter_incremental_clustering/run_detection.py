@@ -87,41 +87,45 @@ def normalize_embedding_name(name: str):
     return name.replace("/", "_").replace("-", "_")
 
 
-def normalize_tweet_ids(values):
-    series = pd.Series(values)
-    numeric_values = pd.to_numeric(series, errors="coerce")
-    if numeric_values.notna().all():
-        return numeric_values
-    return series.astype(str)
-
-
 def resolve_precomputed_embeddings_path(dataset_path: Path, model_name: str):
     normalized_model_name = normalize_embedding_name(model_name)
-    dataset_names = [dataset_path.stem]
-    if dataset_path.stem:
-        dataset_names.append(dataset_path.stem[:1].upper() + dataset_path.stem[1:])
+    dataset_name = dataset_path.stem
 
     candidate_roots = [
-        dataset_path.parent / "pre_embedded_data",
-        dataset_path.parent.parent / "pre_embedded_data",
-        Path(__file__).resolve().parent.parent / "textClust_stream_data" / "pre_embedded_data",
+        dataset_path.parent / "embedded",
+        dataset_path.parent.parent / "embedded",
     ]
 
+    searched_paths = []
     for root in candidate_roots:
-        for dataset_name in dataset_names:
-            embeddings_path = root / dataset_name / f"{normalized_model_name}.npz"
-            if embeddings_path.exists():
-                return embeddings_path
+        embeddings_path = root / normalized_model_name / f"{dataset_name}.npy"
+        if embeddings_path.exists():
+            return embeddings_path
+        searched_paths.append(str(embeddings_path))
 
-    searched_paths = [
-        str(root / dataset_name / f"{normalized_model_name}.npz")
-        for root in candidate_roots
-        for dataset_name in dataset_names
-    ]
     raise FileNotFoundError(
         f"Missing precomputed embeddings for model '{model_name}'. Searched: {searched_paths}"
     )
 
+def prepare_dataframe(data: pd.DataFrame):
+    for col in ["id", "text", "label", "created_at"]:
+        assert col in data.columns, f"DataFrame must contain a '{col}' column"
+        
+    data["id"] = data["id"].astype(str)
+    
+    data["text"] = data["text"].fillna("").astype(str)
+    le = LabelEncoder()
+    data["label"] = np.array(le.fit_transform(data["label"]))
+    
+    data["created_at"] = data["created_at"].astype(str)
+    data["created_at"] = pd.to_datetime(data["created_at"], errors="coerce", utc=False)
+    if data["created_at"].isna().any():
+        logging.warning(
+            f"{data['created_at'].isna().sum()} 'created_at' values could not be parsed; those will be set to 1970-01-01 00:00:00"
+        )
+        data["created_at"] = data["created_at"].fillna(pd.Timestamp("1970-01-01 00:00:00"))
+    
+    return data.drop_duplicates("id").sort_values("created_at").reset_index(drop=True)
 
 def load_npy_dataset(dataset_path: Path):
     data = np.load(dataset_path, allow_pickle=True)
@@ -135,26 +139,7 @@ def load_npy_dataset(dataset_path: Path):
         columns.extend([f"extra_{idx}" for idx in range(data.shape[1] - len(columns))])
 
     frame = pd.DataFrame(data, columns=columns)
-    frame["id"] = normalize_tweet_ids(frame["id"])
-    frame["text"] = frame["text"].fillna("").astype(str)
-    le = LabelEncoder()
-    frame["label"] = le.fit_transform(frame["label"])
-    frame["created_at"] = frame["created_at"].astype(str)
-    # Robustly parse timestamps; fall back to a default when missing/unparsable.
-    times = pd.to_datetime(frame["created_at"], errors="coerce", utc=False)
-    if times.isna().all():
-        logging.warning(
-            "No valid 'created_at' timestamps found; defaulting to 1970-01-01 00:00:00"
-        )
-        times = times.fillna(pd.Timestamp("1970-01-01 00:00:00"))
-    elif times.isna().any():
-        logging.warning(
-            "Some 'created_at' values could not be parsed; those will be set to 1970-01-01 00:00:00"
-        )
-        times = times.fillna(pd.Timestamp("1970-01-01 00:00:00"))
-    frame["date"] = times.dt.strftime("%Y%m%d")
-    frame["time"] = times.dt.strftime("%H:%M:%S")
-    return frame.drop_duplicates("id").sort_values("id").reset_index(drop=True)
+    return prepare_dataframe(frame)
 
 
 def load_json_dataset(dataset_path: Path):
@@ -170,57 +155,31 @@ def load_json_dataset(dataset_path: Path):
 
     if "created_at" not in frame.columns:
         if "ts" in frame.columns:
-            frame["created_at"] = pd.to_datetime(frame["ts"], unit="ms", errors="coerce")
+            frame["created_at"] = frame["ts"]
         elif "timestamp" in frame.columns:
-            timestamp_values = pd.to_numeric(frame["timestamp"], errors="coerce")
-            if timestamp_values.notna().any():
-                timestamp_unit = "ms" if timestamp_values.abs().max() > 1e11 else "s"
-                frame["created_at"] = pd.to_datetime(
-                    timestamp_values, unit=timestamp_unit, errors="coerce"
-                )
-            else:
-                frame["created_at"] = pd.to_datetime(frame["timestamp"], errors="coerce")
+            frame["created_at"] = frame["ts"]
         else:
-            frame["created_at"] = pd.NaT
+            raise ValueError(f"No 'created_at', 'ts', or 'timestamp' column found in the dataset {dataset_path}")
 
-    if "label" not in frame.columns:
-        frame["label"] = np.nan
-
-    frame["id"] = normalize_tweet_ids(frame["id"])
-    frame["text"] = frame["text"].fillna("").astype(str)
-    le = LabelEncoder()
-    frame["label"] = le.fit_transform(frame["label"])
-    frame["created_at"] = frame["created_at"].astype(str)
-
-    times = pd.to_datetime(frame["created_at"], errors="coerce", utc=False)
-    if times.isna().all():
-        logging.warning(
-            "No valid 'created_at' timestamps found; defaulting to 1970-01-01 00:00:00"
-        )
-        times = times.fillna(pd.Timestamp("1970-01-01 00:00:00"))
-    elif times.isna().any():
-        logging.warning(
-            "Some 'created_at' values could not be parsed; those will be set to 1970-01-01 00:00:00"
-        )
-        times = times.fillna(pd.Timestamp("1970-01-01 00:00:00"))
-    frame["date"] = times.dt.strftime("%Y%m%d")
-    frame["time"] = times.dt.strftime("%H:%M:%S")
-    return frame.drop_duplicates("id").sort_values("id").reset_index(drop=True)
+    return prepare_dataframe(frame)
 
 
 def load_precomputed_embeddings(embeddings_path: Path, tweet_ids=None):
-    archive = np.load(embeddings_path, allow_pickle=True)
-    if "embeddings" not in archive.files:
+    archive = np.load(embeddings_path, allow_pickle=True).item()
+    if "embeddings" not in archive.keys():
         raise KeyError(f"{embeddings_path} does not contain an 'embeddings' array")
+    if "times" not in archive.keys():
+        raise KeyError(f"{embeddings_path} does not contain a 'times' array")
 
     embeddings = archive["embeddings"]
+    times = archive["times"]
+
     if tweet_ids is not None:
-        if "tweet_ids" not in archive.files:
+        if "tweet_ids" not in archive.keys():
             raise KeyError(f"{embeddings_path} does not contain a 'tweet_ids' array")
 
-        archive_ids = normalize_tweet_ids(archive["tweet_ids"])
-        tweet_ids = normalize_tweet_ids(tweet_ids)
-        if np.any(~np.isin(tweet_ids, archive_ids)):
+        archive_ids = archive["tweet_ids"]
+        if set(tweet_ids) != set(archive_ids):
             raise ValueError(
                 f"Embedding file {embeddings_path} has {len(archive_ids)} tweet ids, "
                 f"but the dataset contains {len(tweet_ids)} rows"
@@ -237,67 +196,43 @@ def load_precomputed_embeddings(embeddings_path: Path, tweet_ids=None):
                     f"Tweet id {exc.args[0]} is missing in {embeddings_path}"
                 ) from exc
             embeddings = embeddings[order]
+            times = times[order]
 
     if embeddings.dtype == object:
         embeddings = np.vstack(embeddings)
-    return np.asarray(embeddings)
+    return np.asarray(embeddings), np.asarray(times)
 
 
 def load_inputs(params):
     dataset_path = Path(params["dataset"])
-    is_json_dataset = dataset_path.suffix.lower() in {".json", ".jsonl"}
-    if params["model"] == "sbert":
-        if dataset_path.suffix == ".npy":
-            data = load_npy_dataset(dataset_path)
-        elif is_json_dataset:
-            data = load_json_dataset(dataset_path)
-        else:
-            data = load_dataset(str(dataset_path), "vectors", False)
-            data["id"] = pd.to_numeric(data["id"], errors="raise")
-
-        embeddings_path = resolve_precomputed_embeddings_path(dataset_path, params["sub_model"])
-        vectors = load_precomputed_embeddings(embeddings_path, data["id"].to_numpy())
-        return vectors, data
-
     if dataset_path.suffix == ".npy":        
-        data = load_npy_dataset(dataset_path)
-        embeddings_path = resolve_precomputed_embeddings_path(dataset_path, params["model"])
-        vectors = load_precomputed_embeddings(embeddings_path, data["id"].to_numpy())
-        
-        seed = params.get("seed", None)
-        max_samples = params.get("max_samples", None)
-        if seed is not None:
-            np.random.seed(seed)
-            start = np.random.randint(0, len(data))
-        else:
-            start = 0
-        if max_samples is not None:
-            end = min(start + max_samples, len(data))
-        else:
-            end = len(data)
-        data = data.iloc[start:end].reset_index(drop=True)
-        vectors = vectors[start:end]
-        
-        return vectors, data
-
-    if is_json_dataset:
+        data = load_npy_dataset(dataset_path)    
+    elif dataset_path.suffix.lower() in {".json", ".jsonl"}:
         data = load_json_dataset(dataset_path)
-        embeddings_path = resolve_precomputed_embeddings_path(dataset_path, params["model"])
-        vectors = load_precomputed_embeddings(embeddings_path, data["id"].to_numpy())
-        return vectors, data
+    else:
+        raise ValueError(f"Unsupported dataset file extension: {dataset_path.suffix}")
+      
+    embeddings_path = resolve_precomputed_embeddings_path(dataset_path, params["model"])
+    vectors, times = load_precomputed_embeddings(embeddings_path, data["id"].to_numpy())
+    
+    
+    seed = params.get("seed", None)
+    max_samples = params.get("max_samples", None)
+    if seed is not None:
+        np.random.seed(seed)
+        start = np.random.randint(0, len(data))
+    else:
+        start = 0
+    if max_samples is not None:
+        end = min(start + max_samples, len(data))
+    else:
+        end = len(data)
+    data = data.iloc[start:end].reset_index(drop=True)
+    vectors = vectors[start:end]
+    times = times[start:end]
+    return vectors, times, data
 
-    # For non-.npy datasets, prefer precomputed embeddings when available to
-    # avoid building features (which can fail when dataset paths are files).
-    try:
-        embeddings_path = resolve_precomputed_embeddings_path(dataset_path, params["model"])
-    except FileNotFoundError:
-        return build_matrix(**params)
-
-    # Load dataset and align embeddings
-    data = load_dataset(str(dataset_path), "vectors", False)
-    data["id"] = pd.to_numeric(data["id"], errors="raise")
-    vectors = load_precomputed_embeddings(embeddings_path, data["id"].to_numpy())
-    return vectors, data
+    
 
 
 def run(args: dict):
@@ -322,16 +257,16 @@ def run(args: dict):
     params["model"] = model
 
     # Create document embeddings
-    X, data = load_inputs(params)
+    X, times, data = load_inputs(params)
 
-    # todo: improve window computation
-    params["window"] = int(
-        data.groupby("date").size().mean()
-        * params["window"]
-        / 24
-        // params["batch_size"]
-        * params["batch_size"]
-    )
+    # todo: improve window computation # LMS: I removed this because I want to optimize data independent
+    # params["window"] = int(
+    #     data.groupby("date").size().mean()
+    #     * params["window"]
+    #     / 24
+    #     // params["batch_size"]
+    #     * params["batch_size"]
+    # )
 
     clustering = ClusteringAlgo(
         threshold=float(params["threshold"]),
@@ -350,32 +285,36 @@ def run(args: dict):
     end_time = datetime.now()
 
     # Run evaluation
-    ami = adjusted_mutual_info_score(data.label, y_pred)
-    ari = adjusted_rand_score(data.label, y_pred)
-    p, r, f1 = cluster_event_match(data, y_pred)
+    #ami = adjusted_mutual_info_score(data.label, y_pred)
+    #ari = adjusted_rand_score(data.label, y_pred)
+    #p, r, f1 = cluster_event_match(data, y_pred)
     
     data["pred"] = y_pred
-    if params["save_results"] == True:
-    # Write detected labels to a csv file
-        dataset_path = Path(params["dataset"])
-        output_dir = Path(params["output_dir"])
-        output_dir.mkdir(parents=True, exist_ok=True)
-        filename = output_dir / f"{dataset_path.stem}_clustering_results.tsv"
-        logging.info("Write predicted labels to {}".format(filename))
+    # if params["save_results"] == True:
+    # # Write detected labels to a csv file
+    #     dataset_path = Path(params["dataset"])
+    #     output_dir = Path(params["output_dir"])
+    #     output_dir.mkdir(parents=True, exist_ok=True)
+    #     filename = output_dir / f"{dataset_path.stem}_clustering_results.tsv"
+    #     logging.info("Write predicted labels to {}".format(filename))
         
-        data[["id", "label", "pred"]].to_csv(
-            filename, index=False, sep="\t", quoting=csv.QUOTE_ALL
-        )
-
+    #     data[["id", "label", "pred"]].to_csv(
+    #         filename, index=False, sep="\t", quoting=csv.QUOTE_ALL
+    #     )
+    time_taken = (end_time - start_time).seconds
+    embedding_time = times.sum()
     # Write evaluation metrics to a csv file
     params.update(
         {
-            "AMI": ami,
-            "ARI": ari,
-            "precision": p,
-            "recall": r,
-            "f1": f1,
+            # "AMI": ami,
+            # "ARI": ari,
+            # "precision": p,
+            # "recall": r,
+            # "f1": f1,
             "seconds": (end_time - start_time).seconds,
+            "time_taken_s": str(time_taken),
+            "embedding_time_s": embedding_time,
+            "total_time_s": time_taken + embedding_time,
         }
     )
     stats = pd.DataFrame(params, index=[0])
@@ -385,11 +324,11 @@ def run(args: dict):
             "model",
             "sub_model",
             "lang",
-            "AMI",
-            "ARI",
-            "precision",
-            "recall",
-            "f1",
+            #"AMI",
+            #"ARI",
+            #"precision",
+            #"recall",
+            #"f1",
             "seconds",
             "threshold",
             "window",
@@ -398,17 +337,17 @@ def run(args: dict):
             "hashtag_split",
         ]
     ]
-    print(stats[["sub_model", "threshold", "AMI", "ARI", "f1"]].iloc[0])
-    if params["save_results"] == True:
-        try:
-            results = pd.read_csv(METRICS_FILE)
-        except FileNotFoundError:
-            results = pd.DataFrame()
-        stats = pd.concat([results, stats], ignore_index=True)
-        stats.to_csv(METRICS_FILE, index=False)
-        logging.info("Saved results to {}".format(METRICS_FILE))
+    #print(stats[["sub_model", "threshold", "AMI", "ARI", "f1"]].iloc[0])
+    # if params["save_results"] == True:
+    #     try:
+    #         results = pd.read_csv(METRICS_FILE)
+    #     except FileNotFoundError:
+    #         results = pd.DataFrame()
+    #     stats = pd.concat([results, stats], ignore_index=True)
+    #     stats.to_csv(METRICS_FILE, index=False)
+    #     logging.info("Saved results to {}".format(METRICS_FILE))
         
-    return data.label, y_pred
+    return data.label, y_pred, stats
 
 
 if __name__ == "__main__":
