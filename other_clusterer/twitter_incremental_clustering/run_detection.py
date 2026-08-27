@@ -335,6 +335,7 @@ def run(args: dict):
             "batch_size",
             "remove_mentions",
             "hashtag_split",
+            "embedding_time_s",
         ]
     ]
     #print(stats[["sub_model", "threshold", "AMI", "ARI", "f1"]].iloc[0])
