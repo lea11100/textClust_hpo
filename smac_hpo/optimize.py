@@ -33,20 +33,20 @@ from textClust.history.manager import HistoryManager
 from textClust.online.clusterer import Microclusterer
 from textClust.preprocessing.preprocessor import SimulatedEmbeddingPreprocessor, TFIDFPreprocessorWithTranslation
 
-data_path = "/Users/lms/Sciebo/Data/textClust_stream_data/raw_data"
-translation_path = "/Users/lms/Sciebo/Data/textClust_stream_data/translated_no_emojis"
-embedded_data_path = "/Users/lms/Sciebo/Data/textClust_stream_data/embedded"
+data_path = "data/raw_data"
+translation_path = "data/translated_no_emojis"
+embedded_data_path = "data/embedded"
 
 datasets = {
-   # "Arabic_7" : f"{data_path}/Arabic_7.npy",
-   # "Arabic_Twitter" : f"{data_path}/Arabic_Twitter.npy",
+    "Arabic_7" : f"{data_path}/Arabic_7.npy",
+    "Arabic_Twitter" : f"{data_path}/Arabic_Twitter.npy",
     "CrisisLexT6" : f"{data_path}/CrisisLexT6.npy",
     "CrisisLexT7" : f"{data_path}/CrisisLexT7.npy",
     "CrisisLexT26" : f"{data_path}/CrisisLexT26.npy",
     "CrisisMMD" : f"{data_path}/CrisisMMD.npy",
     "CrisisNLP" : f"{data_path}/CrisisNLP.npy",
     "Event2012" : f"{data_path}/Event2012.npy",
-   # "Event2018" : f"{data_path}/Event2018.npy",
+    "Event2018" : f"{data_path}/Event2018.npy",
     "HumAID" : f"{data_path}/HumAID.npy",
     "KBP" : f"{data_path}/KBP.npy",
     "MAVEN" : f"{data_path}/MAVEN.npy",
@@ -136,9 +136,10 @@ def make_train_function(algorithm: str, max_samples:Optional[int]=30_000, throug
     return train
 
 def make_train_function_ray(max_samples:Optional[int]=30_000):
-    
-    sys.path.append("/Users/lms/Documents/Forschung/textClust_hpo/")
-    sys.path.append("/Users/lms/Documents/Forschung/textClust_hpo/other_clusterer/twitter_incremental_clustering")
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = Path(current_dir).parent
+    sys.path.append(str(root_dir))
+    sys.path.append(f"{root_dir}/other_clusterer/twitter_incremental_clustering")
     from other_clusterer.twitter_incremental_clustering.run_detection import run as run_ray
     
     
@@ -273,7 +274,7 @@ if __name__ == "__main__":
     for i, c in enumerate(incumbents):
         for d in datasets.values():
             try:
-                print(f"Evaluating configuration on dataset: {d}")
+                print(f"Evaluating configuration {i} on dataset: {d}")
                 if parsed_args.algorithm == "inc_clust_ray":
                     train = make_train_function_ray()
                 else:

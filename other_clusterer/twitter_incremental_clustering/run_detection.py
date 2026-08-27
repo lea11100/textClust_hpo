@@ -125,7 +125,7 @@ def prepare_dataframe(data: pd.DataFrame):
         )
         data["created_at"] = data["created_at"].fillna(pd.Timestamp("1970-01-01 00:00:00"))
     
-    return data.drop_duplicates("id").sort_values("created_at").reset_index(drop=True)
+    return data.drop_duplicates("id", keep=False).sort_values("created_at").reset_index(drop=True)
 
 def load_npy_dataset(dataset_path: Path):
     data = np.load(dataset_path, allow_pickle=True)
