@@ -267,6 +267,7 @@ def run(args: dict):
     #     // params["batch_size"]
     #     * params["batch_size"]
     # )
+    params["window"] = int(params["window"] * params["batch_size"])
 
     clustering = ClusteringAlgo(
         threshold=float(params["threshold"]),
