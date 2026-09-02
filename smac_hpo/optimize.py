@@ -76,7 +76,7 @@ class ThroughputLimitHistoryManager(HistoryManager):
             raise RuntimeError(f"Throughput {throughput:.2f} is below the lower bound of {self.lower_bound}. Terminating optimization.")
         self.current_time = time.time()  # Reset timer for next snapshot
 
-def make_train_function(algorithm: str, max_samples:Optional[int]=30_000, throughput_limit: float = 2.0, log_after_n_points: int = 1000):
+def make_train_function(algorithm: str, max_samples:Optional[int]=None, throughput_limit: float = 2.0, log_after_n_points: int = 1000):
     
     def get_algorithm(config: Configuration, seed:Optional[int] = 1,instance:str = ""):
         if instance.endswith(".npy"):
@@ -135,7 +135,7 @@ def make_train_function(algorithm: str, max_samples:Optional[int]=30_000, throug
     
     return train
 
-def make_train_function_ray(max_samples:Optional[int]=30_000):
+def make_train_function_ray(max_samples:Optional[int]=None):
     current_dir = os.path.dirname(os.path.abspath(__file__))
     root_dir = Path(current_dir).parent
     sys.path.append(str(root_dir))
