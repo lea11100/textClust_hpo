@@ -117,13 +117,11 @@ def prepare_dataframe(data: pd.DataFrame):
     le = LabelEncoder()
     data["label"] = np.array(le.fit_transform(data["label"]))
     
-    data["created_at"] = data["created_at"].astype(str)
-    data["created_at"] = pd.to_datetime(data["created_at"], errors="coerce", utc=False)
     if data["created_at"].isna().any():
         logging.warning(
-            f"{data['created_at'].isna().sum()} 'created_at' values could not be parsed; those will be set to 1970-01-01 00:00:00"
+            f"{data['created_at'].isna().sum()} 'created_at' values could not be parsed; those will be set to 0"
         )
-        data["created_at"] = data["created_at"].fillna(pd.Timestamp("1970-01-01 00:00:00"))
+        data["created_at"] = data["created_at"].fillna(0)
     
     return data.drop_duplicates("id", keep=False).sort_values("created_at").reset_index(drop=True)
 
