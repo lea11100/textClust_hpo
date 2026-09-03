@@ -38,22 +38,22 @@ translation_path = "data/translated_no_emojis"
 embedded_data_path = "data/embedded"
 
 datasets = {
-    # "Arabic_7" : f"{data_path}/Arabic_7.npy",
-    # "Arabic_Twitter" : f"{data_path}/Arabic_Twitter.npy",
-    # "CrisisLexT6" : f"{data_path}/CrisisLexT6.npy",
-    # "CrisisLexT7" : f"{data_path}/CrisisLexT7.npy",
-    # "CrisisLexT26" : f"{data_path}/CrisisLexT26.npy",
-    # "CrisisMMD" : f"{data_path}/CrisisMMD.npy",
-    # "CrisisNLP" : f"{data_path}/CrisisNLP.npy",
+    "Arabic_7" : f"{data_path}/Arabic_7.npy",
+    "Arabic_Twitter" : f"{data_path}/Arabic_Twitter.npy",
+    "CrisisLexT6" : f"{data_path}/CrisisLexT6.npy",
+    "CrisisLexT7" : f"{data_path}/CrisisLexT7.npy",
+    "CrisisLexT26" : f"{data_path}/CrisisLexT26.npy",
+    "CrisisMMD" : f"{data_path}/CrisisMMD.npy",
+    "CrisisNLP" : f"{data_path}/CrisisNLP.npy",
     "Event2012" : f"{data_path}/Event2012.npy",
     "Event2018" : f"{data_path}/Event2018.npy",
-    # "HumAID" : f"{data_path}/HumAID.npy",
-    # "KBP" : f"{data_path}/KBP.npy",
-    # "MAVEN" : f"{data_path}/MAVEN.npy",
-    # "Mix_Data" : f"{data_path}/Mix_Data.npy",
-    # "Semantic5-T" : f"{data_path}/Semantic5-T.json",
-    # "Semantic10-T" : f"{data_path}/Semantic10-T.json",
-    # "Semantic40-T" : f"{data_path}/Semantic40-T.json",
+    "HumAID" : f"{data_path}/HumAID.npy",
+    "KBP" : f"{data_path}/KBP.npy",
+    "MAVEN" : f"{data_path}/MAVEN.npy",
+    "Mix_Data" : f"{data_path}/Mix_Data.npy",
+    "Semantic5-T" : f"{data_path}/Semantic5-T.json",
+    "Semantic10-T" : f"{data_path}/Semantic10-T.json",
+    "Semantic40-T" : f"{data_path}/Semantic40-T.json",
 }
 
 TIME_LIMIT = int((30_000 + 500) / 2)  # Maximum time limit in seconds (30,000 points at 2 points/sec + 500 seconds buffer)

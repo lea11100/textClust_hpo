@@ -33,6 +33,6 @@ echo "START runexperiment call at $(date '+%Y-%m-%d %H:%M:%S')"
 echo "Running with dataset: $DATASET, seed: $SEED, algorithm: $ALGORITHM"
 
 module load lang/Python/3.11.3-GCCcore-12.3.0
-source /scratch/hpc-prf-dedsm/sussekl/textClust_hpo/.textClust_hpo_env/bin/activate
+source /scratch/hpc-prf-dedsm/textClust_hpo/.textClust_hpo_venv/bin/activate
 
 python -u smac_hpo/optimize.py --seed $SEED --algorithm $ALGORITHM --loo_datasets $DATASET
