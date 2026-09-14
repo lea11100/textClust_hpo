@@ -33,9 +33,9 @@ from textClust.history.manager import HistoryManager
 from textClust.online.clusterer import Microclusterer
 from textClust.preprocessing.preprocessor import SimulatedEmbeddingPreprocessor, TFIDFPreprocessorWithTranslation
 
-data_path = "data/raw_data"
-translation_path = "data/translated_no_emojis"
-embedded_data_path = "data/embedded"
+data_path = "data/textClust_stream_data/raw_data"
+translation_path = "data/textClust_stream_data/translated_no_emojis"
+embedded_data_path = "data/textClust_stream_data/embedded"
 
 datasets = {
     "Arabic_7" : f"{data_path}/Arabic_7.npy",
@@ -54,6 +54,13 @@ datasets = {
     "Semantic5-T" : f"{data_path}/Semantic5-T.json",
     "Semantic10-T" : f"{data_path}/Semantic10-T.json",
     "Semantic40-T" : f"{data_path}/Semantic40-T.json",
+    "NT" : f"{data_path}/NT.json",
+    "NTS" : f"{data_path}/NTS.json",
+    "NTSO-T" : f"{data_path}/NTSO-T.json",
+    "SO-T" : f"{data_path}/SO-T.json",
+    "News-T" : f"{data_path}/News-T.json",
+    "Trends-T" : f"{data_path}/Trends-T.json",
+    "Tweets-T" : f"{data_path}/Tweets-T.json",
 }
 
 TIME_LIMIT = int((30_000 + 500) / 2)  # Maximum time limit in seconds (30,000 points at 2 points/sec + 500 seconds buffer)
