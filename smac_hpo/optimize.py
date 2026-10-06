@@ -233,7 +233,7 @@ if __name__ == "__main__":
     else:
         selected_datasets = [path for name, path in datasets.items() if name not in parsed_args.loo_datasets]
 
-    with open(f'smac_hpo/params_{parsed_args.algorithm}.pcs', 'r') as f:
+    with open(f'smac_hpo/config_spaces/params_{parsed_args.algorithm}.pcs', 'r') as f:
         configuration = pcs.read(f)
 
     output_path = Path(f"smac3_output/{parsed_args.algorithm}/loo_{parsed_args.loo_datasets}_seed_{parsed_args.seed}")
