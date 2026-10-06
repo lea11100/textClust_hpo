@@ -54,13 +54,13 @@ datasets = {
     "Semantic5-T" : f"{data_path}/Semantic5-T.json",
     "Semantic10-T" : f"{data_path}/Semantic10-T.json",
     "Semantic40-T" : f"{data_path}/Semantic40-T.json",
-    "NT" : f"{data_path}/NT.json",
-    "NTS" : f"{data_path}/NTS.json",
-    "NTSO-T" : f"{data_path}/NTSO-T.json",
-    "SO-T" : f"{data_path}/SO-T.json",
-    "News-T" : f"{data_path}/News-T.json",
-    "Trends-T" : f"{data_path}/Trends-T.json",
-    "Tweets-T" : f"{data_path}/Tweets-T.json",
+    # "NT" : f"{data_path}/NT.json",
+    # "NTS" : f"{data_path}/NTS.json",
+    # "NTSO-T" : f"{data_path}/NTSO-T.json",
+    # "SO-T" : f"{data_path}/SO-T.json",
+    # "News-T" : f"{data_path}/News-T.json",
+    # "Trends-T" : f"{data_path}/Trends-T.json",
+    # "Tweets-T" : f"{data_path}/Tweets-T.json",
 }
 
 TIME_LIMIT = int((30_000 + 500) / 2)  # Maximum time limit in seconds (30,000 points at 2 points/sec + 500 seconds buffer)

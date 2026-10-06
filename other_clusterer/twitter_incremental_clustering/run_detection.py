@@ -108,8 +108,15 @@ def resolve_precomputed_embeddings_path(dataset_path: Path, model_name: str):
     )
 
 def prepare_dataframe(data: pd.DataFrame):
-    for col in ["id", "text", "label", "created_at"]:
+    for col in ["id", "text", "label"]:
         assert col in data.columns, f"DataFrame must contain a '{col}' column"
+
+    if "created_at" not in data.columns:
+        logging.warning(
+            "Dataset does not contain a 'created_at', 'ts', or 'timestamp' column; "
+            "all timestamps will be set to 0"
+        )
+        data["created_at"] = 0
         
     data["id"] = data["id"].astype(str)
     
@@ -141,7 +148,7 @@ def load_npy_dataset(dataset_path: Path):
 
 
 def load_json_dataset(dataset_path: Path):
-    frame = pd.read_json(dataset_path, lines=True)
+    frame = pd.read_json(dataset_path, dtype=False, lines=True)
 
     rename_map = {
         "tweetID": "id",
@@ -155,9 +162,7 @@ def load_json_dataset(dataset_path: Path):
         if "ts" in frame.columns:
             frame["created_at"] = frame["ts"]
         elif "timestamp" in frame.columns:
-            frame["created_at"] = frame["ts"]
-        else:
-            raise ValueError(f"No 'created_at', 'ts', or 'timestamp' column found in the dataset {dataset_path}")
+            frame["created_at"] = frame["timestamp"]
 
     return prepare_dataframe(frame)
 
