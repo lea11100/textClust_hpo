@@ -10,6 +10,8 @@
 #SBATCH --output=smac3_logs/%a.out
 #SBATCH --array=0-29
 
+module load tools/Apptainer/1.1.9-GCCcore-11.3.0
+
 SEEDS=( 1 2 3 4 5 6 7 8 9 10 )
 ALGORITHMS=( "textClust" "embClust" "inc_clust_ray" )
 
@@ -27,7 +29,11 @@ ALGORITHM=${ALGORITHMS[$IDX_ALGORITHM]}
 echo "START runexperiment call at $(date '+%Y-%m-%d %H:%M:%S')"
 echo "Running with seed: $SEED, algorithm: $ALGORITHM"
 
-module load lang/Python/3.11.3-GCCcore-12.3.0
-source /scratch/hpc-prf-dedsm/sussekl/textClust_hpo/.textClust_hpo_env/bin/activate
-
-python -u smac_hpo/optimize.py --seed $SEED --algorithm $ALGORITHM
+apptainer exec \
+	--no-home \
+	--pwd /opt/project \
+	--bind "$PWD:/opt/project" \
+	python311.sif \
+	python -u smac_hpo/optimize.py \
+	--seed "$SEED" \
+	--algorithm "$ALGORITHM"

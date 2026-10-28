@@ -1,0 +1,32 @@
+
+Bootstrap: docker
+From: python:3.11-slim
+
+%files
+    requirements.txt /opt/project/requirements.txt
+    ext_lib /opt/project/ext_lib
+
+%post
+    python -m pip install --no-cache-dir --upgrade pip
+
+    cd /opt/project
+    pip install -r requirements.txt
+    pip install -e ./ext_lib/textClust
+    pip install -e ./ext_lib/mosmac 
+    pip install pygmo
+    python -m nltk.downloader -d /usr/local/share/nltk_data stopwords
+    
+    # Check dependency consistency
+    python -m pip check
+
+%environment
+
+    # Fakeroot-built files can appear owned by nobody at runtime. NLTK refuses
+    # to load them directly, so stage the corpus in a private user-owned directory.
+    NLTK_DATA=$(mktemp -d /tmp/textclust-nltk.XXXXXXXX) || exit 1
+    mkdir "$NLTK_DATA/corpora" || exit 1
+    cp -R /usr/local/share/nltk_data/corpora/stopwords "$NLTK_DATA/corpora/" || exit 1
+    export NLTK_DATA
+
+%runscript
+    exec python "$@"
