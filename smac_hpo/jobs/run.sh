@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=12-12
+#SBATCH --time=3-12
 #SBATCH --mem=16G
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=sussekl@mail.uni-paderborn.de
@@ -7,10 +7,11 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --partition=normal
 #SBATCH --account=hpc-prf-dedsm
-#SBATCH --output=smac3_logs/%a.out
+#SBATCH --output=noctua_logs/run_%J_%a.out
 #SBATCH --array=0-240
 
 module load tools/Apptainer/1.1.9-GCCcore-11.3.0
+DATA_DIR=$(readlink -f data/textClust_stream_data)
 
 DATASETS=( "Arabic_Twitter Semantic40-T" "KBP Arabic_7"
            "Mix_Data CrisisLexT6" "Semantic10-T Event2018"
@@ -38,6 +39,7 @@ apptainer exec \
     --no-home \
     --pwd /opt/project \
     --bind "$PWD:/opt/project" \
+    --bind "$DATA_DIR:$DATA_DIR" \
     python311.sif \
     python -u smac_hpo/optimize.py \
     --seed "$SEED" \

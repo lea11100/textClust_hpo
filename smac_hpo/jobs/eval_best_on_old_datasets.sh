@@ -11,6 +11,7 @@
 #SBATCH --array=0-29
 
 module load tools/Apptainer/1.1.9-GCCcore-11.3.0
+DATA_DIR=$(readlink -f data/textClust_stream_data)
 
 ALGORITHMS=(
     "embClust"
@@ -47,5 +48,6 @@ apptainer exec \
     --no-home \
     --pwd /opt/project \
     --bind "$PWD:/opt/project" \
+    --bind "$DATA_DIR:$DATA_DIR" \
     python311.sif \
     python -u smac_hpo/eval_any_config.py "$file_name" "$ALGORITHM" "best_on_old_datasets/${file_name//\//_}_results.csv" --dataset "${DATASETS[@]}"
