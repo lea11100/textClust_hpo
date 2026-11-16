@@ -19,7 +19,7 @@ ALGORITHM_ORDER = list(COLORS.keys())
 
 # Physical figure dimensions matching the LaTeX layout (two-column paper).
 CM = 1 / 2.54
-SINGLE_COLUMN_WIDTH = 8.5 * CM
+SINGLE_COLUMN_WIDTH = 12 * CM
 DOUBLE_COLUMN_WIDTH = 17.5 * CM
 PANEL_HEIGHT = 6 * CM
 
@@ -47,7 +47,7 @@ def set_publication_style() -> None:
     })
 
 
-def facet_aspect(n_panels: int, height: float = PANEL_HEIGHT, width: float = DOUBLE_COLUMN_WIDTH) -> float:
+def facet_aspect(n_panels: int, height: float = PANEL_HEIGHT, width: float = SINGLE_COLUMN_WIDTH) -> float:
     """Return the seaborn FacetGrid aspect so that n_panels side by side span the given width."""
     return (width / n_panels) / height
 
