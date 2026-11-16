@@ -5,6 +5,7 @@ import numpy as np
 import json
 import scipy
 import seaborn as sns
+import matplotlib.pyplot as plt
 
 COLOR_PALETTE = sns.color_palette("Paired", n_colors=3)
 
@@ -15,6 +16,40 @@ COLORS = {
 }
 
 ALGORITHM_ORDER = list(COLORS.keys())
+
+# Physical figure dimensions matching the LaTeX layout (two-column paper).
+CM = 1 / 2.54
+SINGLE_COLUMN_WIDTH = 8.5 * CM
+DOUBLE_COLUMN_WIDTH = 17.5 * CM
+PANEL_HEIGHT = 6 * CM
+
+
+def set_publication_style() -> None:
+    """Set rcParams so figures remain readable when included in LaTeX at 100% size."""
+    plt.rcParams.update({
+        "font.family": "serif",
+        "font.size": 10,
+        "axes.labelsize": 10,
+        "axes.titlesize": 10,
+        "xtick.labelsize": 9,
+        "ytick.labelsize": 9,
+        "legend.fontsize": 9,
+        "lines.linewidth": 1.5,
+        "axes.linewidth": 0.8,
+        "xtick.major.width": 0.8,
+        "ytick.major.width": 0.8,
+        "xtick.major.size": 3,
+        "ytick.major.size": 3,
+        "xtick.direction": "in",
+        "ytick.direction": "in",
+        "figure.dpi": 120,
+        "savefig.dpi": 300,
+    })
+
+
+def facet_aspect(n_panels: int, height: float = PANEL_HEIGHT, width: float = DOUBLE_COLUMN_WIDTH) -> float:
+    """Return the seaborn FacetGrid aspect so that n_panels side by side span the given width."""
+    return (width / n_panels) / height
 
 OLD_DATASETS = [ "News-T", "SO-T", "Trends-T", "Tweets-T" ]
 NEW_DATASETS = [ "Arabic_7", "Arabic_Twitter", "CrisisLexT6", "CrisisLexT7", "CrisisLexT26", "CrisisMMD", "CrisisNLP", "Event2012", "Event2018",
