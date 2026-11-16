@@ -300,6 +300,40 @@ def load_results_csv(file_path: str = "results/textClust_hpo_results/full_merged
     """
     return pd.read_csv(file_path)
 
+def build_all_configs_csv(full_opt_results_df: pd.DataFrame, store_path: str = "results/textClust_hpo_results/all_configs.csv") -> pd.DataFrame:
+    """
+    Aggregate the full-optimization results of the new datasets per configuration and store them as CSV.
+
+    Numeric columns are averaged over datasets, non-numeric columns take the first value.
+
+    Args:
+        full_opt_results_df (pd.DataFrame): The merged results DataFrame.
+        store_path (str): The path where the aggregated CSV file should be stored.
+
+    Returns:
+        pd.DataFrame: The aggregated DataFrame.
+    """
+    df = full_opt_results_df[(full_opt_results_df["config_source"] == "full") & full_opt_results_df["dataset"].isin(NEW_DATASETS)].copy()
+
+    group_cols = ["config_id", "algorithm"]
+    agg_cols = [c for c in df.columns if c not in group_cols]
+
+    agg_map = {
+        c: ("mean" if pd.api.types.is_numeric_dtype(df[c]) else "first")
+        for c in agg_cols
+    }
+
+    df = (
+        df
+        .groupby(group_cols)
+        .agg(agg_map)
+        .reset_index()
+        .drop(columns=["dataset"])
+    )
+
+    df.to_csv(store_path)
+    return df
+
 def pareto_optimal_points(
     data: pd.DataFrame,
     objective_columns: list[str],
@@ -408,3 +442,4 @@ def normalize(df: pd.DataFrame, columns: list[str], use_log: list[bool] | bool =
 if __name__ == "__main__":
     df = build_results_csv()
     store_results_csv(df)
+    build_all_configs_csv(load_results_csv())
