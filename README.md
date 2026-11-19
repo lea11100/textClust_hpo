@@ -3,8 +3,7 @@
 This repository contains the code for hyperparameter optimization (HPO) of
 stream clustering algorithms for short-text event detection. It optimizes the
 configurations of **textClust**, **embClust** and an incremental clustering
-baseline (**FSD**, implemented with Ray) using
-[SMAC3](https://github.com/automl/SMAC3) in a multi-objective setting, and
+baseline (**FSD**, implemented with Ray) using the multi-objective version (MO-SMAC) of [SMAC3](https://github.com/automl/SMAC3), and
 evaluates the resulting configurations on a collection of social media
 datasets (leave-one-dataset-out and default configurations).
 
