@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 COLOR_PALETTE = sns.color_palette("Paired", n_colors=3)
 
 COLORS = {
-    "FSD": COLOR_PALETTE[2],
+    "FSD-SBERT": COLOR_PALETTE[2],
     "embClust": COLOR_PALETTE[1],
     "textClust": COLOR_PALETTE[0],
 }
@@ -72,7 +72,7 @@ def load_optimization_performance_old_datasets(file_path: str = "results/textClu
         elif "textClust" in file:
             algorithm = "textClust"
         elif "inc_clust_ray" in file:
-            algorithm = "FSD"
+            algorithm = "FSD-SBERT"
         df = pd.read_csv(os.path.join(f"{file_path}", file))
         df["algorithm"] = algorithm
         if "dataset_name" in df.columns:
@@ -135,8 +135,8 @@ def load_optimization_performance(file_path: str = "results/textClust_hpo_result
     assert len(result) != 0, "No rows were loaded from the CSV files. Please check the file paths and contents."
     assert result["is_test"].sum() != 0, "No rows were marked as test rows. Please check the dataset names and the parsing of the 'loo_datasets' column."
 
-    # Rename inc_clust_ray to FSD 
-    result["algorithm"] = result["algorithm"].replace({"inc_clust_ray": "FSD"})
+    # Rename inc_clust_ray to FSD-SBERT 
+    result["algorithm"] = result["algorithm"].replace({"inc_clust_ray": "FSD-SBERT"})
     
     # Specify if configuration was optained during CV or full optimization
     result["config_source"] = "cv"
@@ -168,7 +168,7 @@ def load_optimization_configs(file_path: str = "results/textClust_hpo_results/sm
     def load_configurations(algorithm):
         config_dir = os.path.join(file_path, algorithm)
         results = []
-        display_algorithm = "FSD" if algorithm == "inc_clust_ray" else algorithm
+        display_algorithm = "FSD-SBERT" if algorithm == "inc_clust_ray" else algorithm
 
         for file in os.listdir(config_dir):
             if not file.endswith(".json"):
@@ -211,7 +211,7 @@ def load_default_performance_and_config(file_path_performance: str = "results/te
         elif "textClust" in file:
             algorithm = "textClust"
         elif "inc_clust_ray" in file:
-            algorithm = "FSD"
+            algorithm = "FSD-SBERT"
         df["config_id"] = f"{algorithm}_{file}"
         df["algorithm"] = algorithm
         df["config"] = file
