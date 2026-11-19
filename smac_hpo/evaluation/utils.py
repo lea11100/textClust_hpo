@@ -277,7 +277,7 @@ def build_results_csv(file_path_performance: str = "results/textClust_hpo_result
     
     return result
 
-def store_results_csv(df: pd.DataFrame, store_path: str = "results/textClust_hpo_results/full_merged_results.csv") -> None:
+def store_results_csv(df: pd.DataFrame, store_path: str = "configs/all_configs.csv") -> None:
     """
     Store the given DataFrame as a CSV file at the specified path.
 
@@ -288,7 +288,7 @@ def store_results_csv(df: pd.DataFrame, store_path: str = "results/textClust_hpo
     os.makedirs(os.path.dirname(store_path), exist_ok=True)
     df.to_csv(store_path, index=False)
 
-def load_results_csv(file_path: str = "results/textClust_hpo_results/full_merged_results.csv") -> pd.DataFrame:
+def load_results_csv(file_path: str = "configs/all_configs.csv") -> pd.DataFrame:
     """
     Load a results CSV from the specified file path.
 
@@ -300,7 +300,7 @@ def load_results_csv(file_path: str = "results/textClust_hpo_results/full_merged
     """
     return pd.read_csv(file_path)
 
-def build_all_configs_csv(full_opt_results_df: pd.DataFrame, store_path: str = "results/textClust_hpo_results/all_configs.csv") -> pd.DataFrame:
+def build_all_configs_csv(full_opt_results_df: pd.DataFrame, store_path: str = "configs/best_configs.csv") -> pd.DataFrame:
     """
     Aggregate the full-optimization results of the new datasets per configuration and store them as CSV.
 
