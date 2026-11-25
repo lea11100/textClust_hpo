@@ -1,0 +1,17 @@
+\begin{table}
+\caption{Comparison AMI and throughput (Tp.). We report the mean and standard deviation per dataset type and the best mean default performance in grey.}
+\label{tab:comparison}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{llccc}
+\toprule
+ & Dataset Type & FSD-SBERT & embClust & textClust \\
+\midrule
+\multirow{2}{*}{AMI} & Artificial & 0.618 $\pm$ 0.12 \textcolor[HTML]{B3B3B3}{(0.53)} & \textbf{0.622 $\pm$ 0.20} \textcolor[HTML]{B3B3B3}{(0.44)} & 0.572 $\pm$ 0.29 \textcolor[HTML]{B3B3B3}{(0.39)} \\
+ & Real (No LLMs) & 0.476 $\pm$ 0.24 \textcolor[HTML]{B3B3B3}{(0.46)} & 0.507 $\pm$ 0.28 \textcolor[HTML]{B3B3B3}{(0.30)} & \textbf{0.596 $\pm$ 0.25} \textcolor[HTML]{B3B3B3}{(0.55)} \\
+\midrule
+\multirow{2}{*}{Tp.} & Artificial & 0.947 $\pm$ 0.03 \textcolor[HTML]{B3B3B3}{(0.56)} & 0.861 $\pm$ 0.05 \textcolor[HTML]{B3B3B3}{(0.55)} & \textbf{0.951 $\pm$ 0.01} \textcolor[HTML]{B3B3B3}{(0.86)} \\
+ & Real (No LLMs) & \textbf{0.958 $\pm$ 0.03} \textcolor[HTML]{B3B3B3}{(0.68)} & 0.886 $\pm$ 0.02 \textcolor[HTML]{B3B3B3}{(0.66)} & 0.954 $\pm$ 0.01 \textcolor[HTML]{B3B3B3}{(0.86)} \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
